@@ -15,6 +15,10 @@ import {
   MapPin,
   Eye,
   Clock,
+  Warehouse,
+  AlertTriangle,
+  WifiOff,
+  Battery,
 } from "lucide-react";
 
 export type StateId =
@@ -36,9 +40,9 @@ export type HomeState = {
   id: StateId;
   name: string;
   icon: LucideIcon;
-  accent: string; // tailwind color class shorthand for chips
-  confidence: number; // 0-100
-  inferredAt: string; // human-readable e.g. "07:14 AM"
+  accent: string;
+  confidence: number;
+  inferredAt: string;
   signals: Signal[];
   rationale: string;
   actions: AutoAction[];
@@ -87,7 +91,7 @@ export const morningWake: HomeState = {
     },
   ],
   rationale:
-    "Motion detected at your usual wake time, with a 9 AM calendar event and a 24-minute commute. Lifting your morning routine.",
+    "Motion at your usual wake time, with a 9 AM calendar event and a 24-minute commute.",
   actions: [
     {
       id: "lights-bedroom",
@@ -110,16 +114,8 @@ export const morningWake: HomeState = {
       label: "Hub briefing started",
       device: "Nest Hub Max — Kitchen",
       icon: Volume2,
-      detail: "Weather, calendar, commute, top headlines",
+      detail: "Weather, calendar, commute",
       status: "executed",
-    },
-    {
-      id: "door-unlock",
-      label: "Front door unlock held",
-      device: "Nest x Yale Lock",
-      icon: Lock,
-      detail: "Below 90% confidence threshold for security",
-      status: "skipped",
     },
   ],
 };
@@ -172,15 +168,14 @@ export const allStates: HomeState[] = [
       { id: "calendar", label: "Owner: 9 AM stand-up", detail: "Confirms departure", icon: Calendar },
       { id: "time", label: "Within typical leave window", detail: "8:30–9:00 AM", icon: Clock },
     ],
-    rationale:
-      "Last phone left geofence with calendar context. Securing the home.",
+    rationale: "Last phone left geofence with calendar context. Securing the home.",
     actions: [
       {
         id: "lock-front",
         label: "Front door locked",
         device: "Nest x Yale Lock",
         icon: Lock,
-        detail: "Auto-lock at 96% confidence",
+        detail: "Auto-lock confirmed",
         status: "executed",
       },
       {
@@ -214,8 +209,7 @@ export const allStates: HomeState[] = [
       { id: "time", label: "Within typical return window", detail: "5:15–6:30 PM", icon: Clock },
       { id: "camera", label: "No unknown faces home", detail: "Empty", icon: Camera },
     ],
-    rationale:
-      "Resident inbound — pre-conditioning the home for arrival.",
+    rationale: "Resident inbound — pre-conditioning the home for arrival.",
     actions: [
       {
         id: "thermo-prewarm",
@@ -248,8 +242,7 @@ export const allStates: HomeState[] = [
       { id: "geofence", label: "Owner home", detail: "Phone present", icon: MapPin },
       { id: "time", label: "Daylight hours", detail: "Lower-risk window", icon: Clock },
     ],
-    rationale:
-      "Calendar suggests an expected guest. Holding security automations and notifying you.",
+    rationale: "Calendar suggests an expected guest. Holding security automations and notifying you.",
     actions: [
       {
         id: "notify",
@@ -282,8 +275,7 @@ export const allStates: HomeState[] = [
       { id: "geofence", label: "All phones idle", detail: "Charging dock", icon: MapPin },
       { id: "calendar", label: "Tomorrow: 9 AM stand-up", detail: "Wake target 7:00 AM", icon: Calendar },
     ],
-    rationale:
-      "Household settling for the night. Securing and dimming.",
+    rationale: "Household settling for the night. Securing and dimming.",
     actions: [
       {
         id: "lights-dim",
@@ -313,68 +305,207 @@ export const allStates: HomeState[] = [
   },
 ];
 
-export type DeviceTile = {
+// =============================================================================
+// Pending suggestions (Suggest Mode — Treatment 1 from the eval doc)
+// =============================================================================
+
+export type PendingSuggestion = {
   id: string;
-  name: string;
-  room: string;
-  state: string;
+  label: string;
+  device: string;
   icon: LucideIcon;
-  on: boolean;
-  metric?: string;
+  rationale: string;
+  signalCount: string;
 };
 
-export const devices: DeviceTile[] = [
+export const pendingSuggestions: PendingSuggestion[] = [
+  {
+    id: "ps-lights",
+    label: "Raise bedroom lights to 35%",
+    device: "Nest + Hue · Bedroom",
+    icon: Lightbulb,
+    rationale: "Motion at your usual wake time + 9 AM stand-up on calendar",
+    signalCount: "4 of 4 sources agree",
+  },
+  {
+    id: "ps-thermo",
+    label: "Pre-warm thermostat to 71°F",
+    device: "Nest Learning · Hallway",
+    icon: Thermometer,
+    rationale: "Sunday morning + 24-min commute to office",
+    signalCount: "4 of 4 sources agree",
+  },
+  {
+    id: "ps-hub",
+    label: "Start morning briefing on Hub",
+    device: "Nest Hub Max · Kitchen",
+    icon: Volume2,
+    rationale: "Weather, calendar, and commute ready when you reach the kitchen",
+    signalCount: "3 of 4 sources agree",
+  },
+];
+
+// =============================================================================
+// Anomalies — "Needs your attention" (V1.1 scope expansion, see AMENDMENTS.md)
+// =============================================================================
+
+export type Anomaly = {
+  id: string;
+  title: string;
+  detail: string;
+  icon: LucideIcon;
+  actionLabel: string;
+  tone: "warn" | "info";
+};
+
+export const anomalies: Anomaly[] = [
+  {
+    id: "garage-open",
+    title: "Garage door has been open 22 min",
+    detail: "Usually closed by 7 AM on weekday mornings",
+    icon: Warehouse,
+    actionLabel: "Close garage",
+    tone: "warn",
+  },
+  {
+    id: "porch-on",
+    title: "Porch light still on",
+    detail: "Has been on since 6:14 PM — sunrise was at 6:02 AM",
+    icon: Lightbulb,
+    actionLabel: "Turn off",
+    tone: "info",
+  },
+];
+
+// =============================================================================
+// Quick controls — contextual subset of devices on the Home tab
+// =============================================================================
+
+export type QuickControl = {
+  id: string;
+  name: string;
+  state: string;
+  icon: LucideIcon;
+  primaryMetric?: string;
+  on: boolean;
+  why: string; // why this is in quick controls right now
+};
+
+export const quickControls: QuickControl[] = [
   {
     id: "thermo",
     name: "Thermostat",
-    room: "Hallway",
-    state: "Heating to 71°F",
+    state: "Heating to 71°",
     icon: Thermometer,
+    primaryMetric: "71°",
     on: true,
-    metric: "71°",
+    why: "Actively heating",
   },
   {
     id: "hub-kitchen",
-    name: "Nest Hub Max",
-    room: "Kitchen",
+    name: "Kitchen Hub",
     state: "Briefing playing",
     icon: Volume2,
     on: true,
-  },
-  {
-    id: "cam-living",
-    name: "Indoor Cam",
-    room: "Living Room",
-    state: "Paused (home)",
-    icon: Camera,
-    on: false,
-  },
-  {
-    id: "doorbell",
-    name: "Doorbell",
-    room: "Front",
-    state: "Armed",
-    icon: Camera,
-    on: true,
+    why: "Just started",
   },
   {
     id: "lights-bed",
     name: "Bedroom Lights",
-    room: "Primary",
-    state: "Sunrise 35%",
+    state: "Sunrise · 35%",
     icon: Lightbulb,
+    primaryMetric: "35%",
     on: true,
-    metric: "35%",
+    why: "Just raised",
   },
   {
     id: "lock-front",
     name: "Front Lock",
-    room: "Front",
-    state: "Locked",
+    state: "Locked overnight",
     icon: Lock,
     on: true,
+    why: "Touched at wind-down",
   },
 ];
+
+// =============================================================================
+// Homes & household members (V1.1 scope — global header)
+// =============================================================================
+
+export type HomeLocation = {
+  id: string;
+  name: string;
+  shortName: string;
+  address: string;
+  deviceCount: number;
+  isPrimary: boolean;
+  state: string; // current presence-ai state for this home
+};
+
+export const homes: HomeLocation[] = [
+  {
+    id: "bh-house",
+    name: "Beverly Hills House",
+    shortName: "Beverly Hills",
+    address: "Westwood, CA",
+    deviceCount: 12,
+    isPrimary: true,
+    state: "Morning Wake",
+  },
+  {
+    id: "tahoe-cabin",
+    name: "Tahoe Cabin",
+    shortName: "Tahoe",
+    address: "South Lake Tahoe, CA",
+    deviceCount: 4,
+    isPrimary: false,
+    state: "Empty · Watching",
+  },
+];
+
+export type HouseholdMember = {
+  id: string;
+  name: string;
+  role: "Owner" | "Member" | "Guest";
+  initial: string;
+  presence: "Home" | "Away" | "Approaching";
+  presenceDetail: string;
+  color: string; // hex bg for avatar
+};
+
+export const householdMembers: HouseholdMember[] = [
+  {
+    id: "you",
+    name: "Herui",
+    role: "Owner",
+    initial: "H",
+    presence: "Home",
+    presenceDetail: "Bedroom · 7:14 AM",
+    color: "#fbbf24",
+  },
+  {
+    id: "yuna",
+    name: "Yuna",
+    role: "Member",
+    initial: "Y",
+    presence: "Home",
+    presenceDetail: "Kitchen · 7:08 AM",
+    color: "#8ab4f8",
+  },
+  {
+    id: "mom",
+    name: "Mom",
+    role: "Guest",
+    initial: "M",
+    presence: "Away",
+    presenceDetail: "Last seen Saturday",
+    color: "#f06292",
+  },
+];
+
+// =============================================================================
+// Weekly Report metrics — replaces the confidence-based metric (per AMENDMENTS #1)
+// =============================================================================
 
 export type WeeklyMetric = {
   label: string;
@@ -386,9 +517,13 @@ export type WeeklyMetric = {
 export const weeklyMetrics: WeeklyMetric[] = [
   { label: "Energy saved", value: "14.7 kWh", delta: "+22% vs. last week", positive: true },
   { label: "Auto-actions", value: "84", delta: "29 security · 41 comfort · 14 lighting", positive: true },
-  { label: "Avg. confidence", value: "92%", delta: "+3 pp vs. launch", positive: true },
+  { label: "Times we asked you first", value: "11", delta: "Down from 18 last week", positive: true },
   { label: "Override rate", value: "4.1%", delta: "Below 8% guardrail", positive: true },
 ];
+
+// =============================================================================
+// Feedback history (used on Feedback screen — confidence display dropped)
+// =============================================================================
 
 export type FeedbackHistoryItem = {
   id: string;

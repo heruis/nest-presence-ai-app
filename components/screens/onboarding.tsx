@@ -15,20 +15,41 @@ import {
   Calendar as CalIcon,
 } from "lucide-react";
 import { StatusBar } from "@/components/status-bar";
+import { GlobalHeader } from "@/components/global-header";
 import { cn } from "@/lib/cn";
+import type { HomeLocation, HouseholdMember } from "@/lib/data";
 
-type Mode = "suggest" | "auto";
+export type Mode = "suggest" | "auto";
 
-export function OnboardingScreen() {
-  const [mode, setMode] = useState<Mode>("auto");
+export function OnboardingScreen({
+  mode,
+  setMode,
+  home,
+  me,
+  onOpenHomeSwitcher,
+  onOpenProfile,
+}: {
+  mode: Mode;
+  setMode: (m: Mode) => void;
+  home: HomeLocation;
+  me: HouseholdMember;
+  onOpenHomeSwitcher: () => void;
+  onOpenProfile: () => void;
+}) {
   const [learning, setLearning] = useState(true);
   const [localOnly, setLocalOnly] = useState(false);
 
   return (
     <div className="aurora h-full w-full overflow-y-auto no-scrollbar pb-32">
       <StatusBar tone="light" />
+      <GlobalHeader
+        home={home}
+        me={me}
+        onOpenHomeSwitcher={onOpenHomeSwitcher}
+        onOpenProfile={onOpenProfile}
+      />
 
-      <div className="px-6 pt-12">
+      <div className="px-6 pt-7">
         <div className="flex items-center gap-2 text-[#8ab4f8]">
           <Sparkles size={14} strokeWidth={2.5} />
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em]">Settings</span>
@@ -36,9 +57,6 @@ export function OnboardingScreen() {
         <h1 className="mt-1 text-[24px] font-semibold leading-tight tracking-tight text-white">
           How should Presence AI work for you?
         </h1>
-        <p className="mt-2 text-[12px] leading-snug text-white/60">
-          You can change this any time. Manual Routines always take priority.
-        </p>
       </div>
 
       {/* mode picker */}
@@ -48,8 +66,7 @@ export function OnboardingScreen() {
           onClick={() => setMode("suggest")}
           icon={<HandHelping size={20} strokeWidth={2.2} />}
           title="Suggest Mode"
-          subtitle="AI proposes — you tap to confirm"
-          body="Best for the first week. You stay in the driver's seat while we learn your household."
+          body="AI proposes — you tap to confirm."
           badge="Soft start"
         />
         <ModeOption
@@ -57,8 +74,7 @@ export function OnboardingScreen() {
           onClick={() => setMode("auto")}
           icon={<Wand size={20} strokeWidth={2.2} />}
           title="Auto Mode"
-          subtitle="AI acts silently. You can override anything."
-          body="The full ambient experience. 48-hour learning window first; security actions still require 90% confidence."
+          body="AI acts silently. You can override anything."
           badge="Recommended"
         />
       </div>
@@ -69,7 +85,7 @@ export function OnboardingScreen() {
           icon={<Cpu size={16} strokeWidth={2.2} />}
           tint="amber"
           title="48-hour learning-only window"
-          body="Watch and learn before any action fires. Strongly recommended for new homes."
+          body="Watch and learn before any action fires. Recommended for new homes."
           on={learning}
           onChange={setLearning}
         />
@@ -78,7 +94,7 @@ export function OnboardingScreen() {
           icon={<Lock size={16} strokeWidth={2.2} />}
           tint="emerald"
           title="Local-only mode"
-          body="On-device inference only. Disables cloud features (weekly report, complex feedback parsing). Accuracy ~84%."
+          body="On-device inference only. Disables the weekly report and free-text feedback."
           on={localOnly}
           onChange={setLocalOnly}
         />
@@ -125,7 +141,6 @@ function ModeOption({
   onClick,
   icon,
   title,
-  subtitle,
   body,
   badge,
 }: {
@@ -133,7 +148,6 @@ function ModeOption({
   onClick: () => void;
   icon: React.ReactNode;
   title: string;
-  subtitle: string;
   body: string;
   badge: string;
 }) {
@@ -168,8 +182,7 @@ function ModeOption({
               {badge}
             </span>
           </div>
-          <p className="text-[12px] text-white/65">{subtitle}</p>
-          <p className="mt-2 text-[12px] leading-snug text-white/55">{body}</p>
+          <p className="mt-1 text-[12px] leading-snug text-white/65">{body}</p>
         </div>
         <span
           className={cn(
@@ -223,9 +236,9 @@ function ToggleRow({
         )}
       >
         <motion.span
-          animate={{ x: on ? 22 : 2 }}
+          animate={{ x: on ? 23 : 3 }}
           transition={{ type: "spring", stiffness: 420, damping: 30 }}
-          className="absolute top-[3px] h-5 w-5 rounded-full bg-white shadow"
+          className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow"
         />
       </button>
     </div>

@@ -64,8 +64,9 @@ The product brief that guided the design and copy is at [`PROMPT.md`](./PROMPT.m
 - **Mock data only.** No real device integration, no real Google account, no real geofence, no real camera ML.
 - **No persistence.** Feedback you give in the demo doesn't persist across reloads.
 - **iPhone-frame on desktop only.** The phone frame is a fixed 400×844 shell. On narrow viewports the layout reflows but the bezel does not shrink.
-- **Two screens are deep, three are flat.** Per the depth-over-breadth design choice, the Home screen and the Feedback flow have full motion and micro-interactions; the other three are static-but-polished.
-- **Some trust UX is illustrative only.** The "long-press to override" hint on the Home tile is copy, not a working gesture, in this prototype.
+- **V1.1 scope vs. submitted documents.** The prototype represents an evolved V1.1 vision that goes slightly beyond the originally-submitted strategy doc, product breakdown, and eval write-up. The two evolutions are: (1) the Home tab's "Needs your attention" anomaly surfacing, which is a new capability layered onto the original six-state model; and (2) the global home-switcher and household-member visibility, which weren't called out in the eval doc's experiment design. The full delta is logged in [`AMENDMENTS.md`](./AMENDMENTS.md). Earlier-assignment documents were not retroactively updated.
+- **Second home is cosmetic.** The home switcher exposes two homes ("Beverly Hills House" and "Tahoe Cabin"); switching to Tahoe re-renders the UI but the underlying mock data is not differentiated per home.
+- **Internal model judgment hidden.** Per a design call, model confidence (the `% confident` numbers from the eval doc) is treated as internal plumbing and is never surfaced to the user — only "X of Y signals agree" appears in-product.
 
 ## Run locally
 

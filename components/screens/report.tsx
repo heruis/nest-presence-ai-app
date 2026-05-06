@@ -12,7 +12,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { StatusBar } from "@/components/status-bar";
-import { weeklyMetrics } from "@/lib/data";
+import { GlobalHeader } from "@/components/global-header";
+import { weeklyMetrics, type HomeLocation, type HouseholdMember } from "@/lib/data";
 import { cn } from "@/lib/cn";
 
 const timeline = [
@@ -27,12 +28,28 @@ const timeline = [
 
 const max = Math.max(...timeline.map((d) => d.actions));
 
-export function ReportScreen() {
+export function ReportScreen({
+  home,
+  me,
+  onOpenHomeSwitcher,
+  onOpenProfile,
+}: {
+  home: HomeLocation;
+  me: HouseholdMember;
+  onOpenHomeSwitcher: () => void;
+  onOpenProfile: () => void;
+}) {
   return (
     <div className="aurora h-full w-full overflow-y-auto no-scrollbar pb-32">
       <StatusBar tone="light" />
+      <GlobalHeader
+        home={home}
+        me={me}
+        onOpenHomeSwitcher={onOpenHomeSwitcher}
+        onOpenProfile={onOpenProfile}
+      />
 
-      <div className="px-6 pt-12">
+      <div className="px-6 pt-7">
         <div className="flex items-center gap-2 text-[#8ab4f8]">
           <Sparkles size={14} strokeWidth={2.5} />
           <span className="text-[11px] font-semibold uppercase tracking-[0.16em]">
@@ -45,8 +62,7 @@ export function ReportScreen() {
           84 times for you.
         </h1>
         <p className="mt-2 text-[13px] leading-snug text-white/60">
-          Apr 28 – May 5 · No voice commands. No manual routines. Just you, living in
-          your home.
+          Apr 28 – May 5 · No voice commands. No manual routines.
         </p>
       </div>
 
@@ -71,9 +87,6 @@ export function ReportScreen() {
         <p className="mt-1 text-[44px] font-semibold leading-none tracking-tight text-white tabular-nums">
           14.7
           <span className="ml-1 text-[20px] font-medium text-white/60">kWh</span>
-        </p>
-        <p className="mt-2 text-[12px] text-white/60">
-          About $3.10 trimmed from your utility bill — without you noticing.
         </p>
       </motion.div>
 

@@ -9,7 +9,10 @@ import { HomeScreen } from "@/components/screens/home";
 import { PresenceAIScreen } from "@/components/screens/presence-ai";
 import { FeedbackScreen } from "@/components/screens/feedback";
 import { ReportScreen } from "@/components/screens/report";
-import { OnboardingScreen } from "@/components/screens/onboarding";
+import { OnboardingScreen, type Mode } from "@/components/screens/onboarding";
+import { HomeSwitcherSheet } from "@/components/home-switcher-sheet";
+import { ProfileSheet } from "@/components/profile-sheet";
+import { homes, householdMembers } from "@/lib/data";
 
 type ScreenId = TabId | "feedback";
 
@@ -23,7 +26,21 @@ const tabFor: Record<ScreenId, TabId> = {
 
 export default function Page() {
   const [screen, setScreen] = useState<ScreenId>("home");
+  const [mode, setMode] = useState<Mode>("auto");
+  const [activeHomeId, setActiveHomeId] = useState(homes[0].id);
+  const [homeSwitcherOpen, setHomeSwitcherOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
   const activeTab = tabFor[screen];
+  const home = homes.find((h) => h.id === activeHomeId) ?? homes[0];
+  const me = householdMembers[0];
+
+  const headerProps = {
+    home,
+    me,
+    onOpenHomeSwitcher: () => setHomeSwitcherOpen(true),
+    onOpenProfile: () => setProfileOpen(true),
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#050608]">
@@ -60,11 +77,11 @@ export default function Page() {
 
           <div className="mt-6 grid grid-cols-2 gap-2 max-w-sm">
             <FeatureChip label="Morning Wake hero" hot />
-            <FeatureChip label="6-state inference" />
-            <FeatureChip label='"Did we get this right?"' hot />
+            <FeatureChip label="Suggest vs Auto modes" hot />
+            <FeatureChip label="Anomaly surfacing" />
+            <FeatureChip label='"Did we get this right?"' />
+            <FeatureChip label="Multi-home + profile" />
             <FeatureChip label="Weekly Intelligence Report" />
-            <FeatureChip label="Suggest vs Auto modes" />
-            <FeatureChip label="On-device + local-only" />
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
@@ -86,12 +103,21 @@ export default function Page() {
               Source-of-truth spec
               <ExternalLink size={12} className="opacity-60" />
             </a>
+            <a
+              href="https://github.com/heruis/nest-presence-ai-app/blob/main/AMENDMENTS.md"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5 text-[12px] font-medium text-white/85 ring-1 ring-white/10 hover:bg-white/10"
+            >
+              Amendments log
+              <ExternalLink size={12} className="opacity-60" />
+            </a>
           </div>
 
           <p className="mt-6 text-[11px] leading-relaxed text-white/35 max-w-sm">
             UCLA MGMT 275 · Final Project · Herui Song. Mock data only — no live
-            account integration. Designed mobile-first; tap a tab below the iPhone to
-            navigate.
+            account integration. Tip: try Settings → Suggest Mode to see the
+            confirmation flow.
           </p>
         </div>
 
@@ -101,7 +127,7 @@ export default function Page() {
             <div className="relative h-full w-full">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={screen}
+                  key={screen + activeHomeId + mode}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
@@ -110,20 +136,38 @@ export default function Page() {
                 >
                   {screen === "home" && (
                     <HomeScreen
+                      mode={mode}
                       onOpenPresence={() => setScreen("presence")}
                       onOpenFeedback={() => setScreen("feedback")}
+                      {...headerProps}
                     />
                   )}
-                  {screen === "presence" && <PresenceAIScreen />}
-                  {screen === "feedback" && <FeedbackScreen />}
-                  {screen === "activity" && <ReportScreen />}
-                  {screen === "settings" && <OnboardingScreen />}
+                  {screen === "presence" && <PresenceAIScreen {...headerProps} />}
+                  {screen === "feedback" && <FeedbackScreen {...headerProps} />}
+                  {screen === "activity" && <ReportScreen {...headerProps} />}
+                  {screen === "settings" && (
+                    <OnboardingScreen mode={mode} setMode={setMode} {...headerProps} />
+                  )}
                 </motion.div>
               </AnimatePresence>
 
               <TabBar
                 active={activeTab}
                 onChange={(t) => setScreen(t as ScreenId)}
+              />
+
+              <HomeSwitcherSheet
+                open={homeSwitcherOpen}
+                onClose={() => setHomeSwitcherOpen(false)}
+                homes={homes}
+                activeId={activeHomeId}
+                onSelect={(id) => setActiveHomeId(id)}
+              />
+              <ProfileSheet
+                open={profileOpen}
+                onClose={() => setProfileOpen(false)}
+                me={me}
+                members={householdMembers}
               />
             </div>
           </IPhoneFrame>

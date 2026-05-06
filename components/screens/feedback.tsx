@@ -13,7 +13,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { StatusBar } from "@/components/status-bar";
-import { morningWake, recentFeedback } from "@/lib/data";
+import { GlobalHeader } from "@/components/global-header";
+import { morningWake, recentFeedback, type HomeLocation, type HouseholdMember } from "@/lib/data";
 import { cn } from "@/lib/cn";
 
 type Outcome = "correct" | "partial" | "wrong";
@@ -42,7 +43,17 @@ const learningCopy: Record<Outcome, { title: string; rule: string; impact: strin
   },
 };
 
-export function FeedbackScreen() {
+export function FeedbackScreen({
+  home,
+  me,
+  onOpenHomeSwitcher,
+  onOpenProfile,
+}: {
+  home: HomeLocation;
+  me: HouseholdMember;
+  onOpenHomeSwitcher: () => void;
+  onOpenProfile: () => void;
+}) {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [note, setNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -56,20 +67,19 @@ export function FeedbackScreen() {
   return (
     <div className="aurora h-full w-full overflow-y-auto no-scrollbar pb-32">
       <StatusBar tone="light" />
+      <GlobalHeader
+        home={home}
+        me={me}
+        onOpenHomeSwitcher={onOpenHomeSwitcher}
+        onOpenProfile={onOpenProfile}
+      />
 
-      <div className="px-6 pt-12">
-        <div className="flex items-center gap-2 text-[#8ab4f8]">
-          <Sparkles size={14} strokeWidth={2.5} />
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em]">
-            Personalization loop
-          </span>
-        </div>
-        <h1 className="mt-1 text-[26px] font-semibold leading-tight tracking-tight text-white">
+      <div className="px-6 pt-7">
+        <h1 className="text-[26px] font-semibold leading-tight tracking-tight text-white">
           Did we get this right?
         </h1>
         <p className="mt-2 text-[12px] leading-snug text-white/60">
-          Your correction trains Presence AI for your household — on-device, never
-          shared.
+          Your correction trains Presence AI for your household.
         </p>
       </div>
 
@@ -81,7 +91,7 @@ export function FeedbackScreen() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-semibold text-white">Morning Wake · 7:14 AM</p>
-            <p className="text-[11px] text-white/55">{morningWake.actions.length} actions · 94% confidence</p>
+            <p className="text-[11px] text-white/55">{morningWake.actions.length} actions auto-fired</p>
           </div>
           <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
             Auto-fired
