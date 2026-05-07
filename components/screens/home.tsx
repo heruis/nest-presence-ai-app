@@ -8,18 +8,15 @@ import {
   RotateCcw,
   Check,
   X as XIcon,
-  TriangleAlert,
+  Cpu,
 } from "lucide-react";
 import { StatusBar } from "@/components/status-bar";
 import { GlobalHeader } from "@/components/global-header";
 import {
-  morningWake,
-  pendingSuggestions as seedPending,
-  anomalies,
-  quickControls,
   type HomeLocation,
   type HouseholdMember,
   type PendingSuggestion,
+  type HomeDataSet,
 } from "@/lib/data";
 import { cn } from "@/lib/cn";
 
@@ -27,29 +24,68 @@ type Mode = "auto" | "suggest";
 
 const skipReasons = ["Wrong time", "Wrong action", "Just not now"];
 
+const pastTense: Record<string, string> = {
+  "Close garage": "Closed",
+  "Turn off": "Off",
+  "Reconnect": "Reconnected",
+  "Remind me": "Reminder set",
+};
+
 export function HomeScreen({
   mode,
+  learning,
+  homeData,
   home,
   me,
   onOpenPresence,
   onOpenFeedback,
+  onOpenAllDevices,
   onOpenHomeSwitcher,
   onOpenProfile,
 }: {
   mode: Mode;
+  learning: boolean;
+  homeData: HomeDataSet;
   home: HomeLocation;
   me: HouseholdMember;
   onOpenPresence: () => void;
   onOpenFeedback: () => void;
+  onOpenAllDevices: () => void;
   onOpenHomeSwitcher: () => void;
   onOpenProfile: () => void;
 }) {
-  const state = morningWake;
+  const state = homeData.activeState;
 
-  // Suggest-mode local state
-  const [pending, setPending] = useState<PendingSuggestion[]>(seedPending);
+  // Suggest-mode pending vs confirmed
+  const [pending, setPending] = useState<PendingSuggestion[]>(
+    homeData.pendingSuggestions
+  );
   const [confirmed, setConfirmed] = useState<PendingSuggestion[]>([]);
-  const [skippedFor, setSkippedFor] = useState<string | null>(null); // suggestion id awaiting reason
+  const [skippedFor, setSkippedFor] = useState<string | null>(null);
+
+  // Undo loops
+  const [undoneAuto, setUndoneAuto] = useState<Set<string>>(new Set());
+  const [undoPill, setUndoPill] = useState(false);
+
+  // Anomaly action lifecycle: id -> "acted" once tapped; row removed shortly after
+  const [anomalyActed, setAnomalyActed] = useState<Set<string>>(new Set());
+  const [anomalyDismissed, setAnomalyDismissed] = useState<Set<string>>(new Set());
+
+  const showUndoPill = () => {
+    setUndoPill(true);
+    window.setTimeout(() => setUndoPill(false), 1400);
+  };
+
+  const undoAuto = (id: string) => {
+    setUndoneAuto((s) => new Set(s).add(id));
+    showUndoPill();
+  };
+
+  const undoConfirmed = (s: PendingSuggestion) => {
+    setConfirmed((c) => c.filter((x) => x.id !== s.id));
+    setPending((p) => [s, ...p]);
+    showUndoPill();
+  };
 
   const confirm = (s: PendingSuggestion) => {
     setPending((p) => p.filter((x) => x.id !== s.id));
@@ -59,6 +95,18 @@ export function HomeScreen({
     setPending((p) => p.filter((x) => x.id !== id));
     setSkippedFor(null);
   };
+
+  const actOnAnomaly = (id: string) => {
+    setAnomalyActed((s) => new Set(s).add(id));
+    window.setTimeout(() => {
+      setAnomalyDismissed((s) => new Set(s).add(id));
+    }, 1400);
+  };
+
+  const visibleActions = state.actions.filter((a) => !undoneAuto.has(a.id));
+  const visibleAnomalies = homeData.anomalies.filter(
+    (a) => !anomalyDismissed.has(a.id)
+  );
 
   return (
     <div className="relative h-full w-full">
@@ -122,8 +170,8 @@ export function HomeScreen({
           </span>
         </motion.button>
 
-        {/* mode indicator (Suggest only) */}
-        {mode === "suggest" && (
+        {/* mode indicator (Suggest only, hidden when learning) */}
+        {mode === "suggest" && !learning && (
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -136,80 +184,149 @@ export function HomeScreen({
           </motion.div>
         )}
 
-        {/* hero card */}
-        <motion.div
-          initial={{ y: 16, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.7, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className="mx-4 mt-6 overflow-hidden rounded-[28px] bg-[#16191c]/85 ring-1 ring-white/8 backdrop-blur-xl"
-        >
-          <div className="px-5 pt-5 pb-4">
-            <div className="flex items-center gap-2 text-[#fbbf24]">
-              <Sparkles size={14} strokeWidth={2.5} />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
-                {mode === "auto"
-                  ? `Auto-actioned at ${state.inferredAt}`
-                  : `Detected at ${state.inferredAt}`}
-              </span>
+        {/* LEARNING BANNER — replaces hero when 48-hour learning is on */}
+        {learning ? (
+          <motion.div
+            initial={{ y: 16, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.7, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="mx-4 mt-6 overflow-hidden rounded-[28px] bg-[#16191c]/85 ring-1 ring-amber-400/25 backdrop-blur-xl"
+          >
+            <div className="px-5 pt-5 pb-3">
+              <div className="flex items-center gap-2 text-amber-300">
+                <Cpu size={14} strokeWidth={2.5} />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                  Learning your home · Hour 12 of 48
+                </span>
+              </div>
+              <p className="mt-2 text-[15px] leading-snug text-white/85">
+                Watching, not acting yet. Here's what we'd have done.
+              </p>
             </div>
-            <p className="mt-2 text-[15px] leading-snug text-white/90">
-              {state.rationale}
-            </p>
-          </div>
+            <div className="mx-5 h-px bg-white/8" />
+            <ul className="px-2 py-2">
+              {state.actions.map((a, i) => {
+                const Icon = a.icon;
+                return (
+                  <motion.li
+                    key={a.id}
+                    initial={{ x: -10, opacity: 0 }}
+                    animate={{ x: 0, opacity: 0.55 }}
+                    transition={{ delay: 0.9 + i * 0.12, duration: 0.5 }}
+                    className="flex items-start gap-3 rounded-2xl px-3 py-2.5"
+                  >
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/8 text-white/50">
+                      <Icon size={15} strokeWidth={2.2} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] font-medium text-white/65 line-through decoration-white/20">
+                        {a.label}
+                      </p>
+                      <p className="text-[12px] text-white/40">{a.device}</p>
+                    </div>
+                  </motion.li>
+                );
+              })}
+            </ul>
+          </motion.div>
+        ) : (
+          /* hero card */
+          <motion.div
+            initial={{ y: 16, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.7, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="mx-4 mt-6 overflow-hidden rounded-[28px] bg-[#16191c]/85 ring-1 ring-white/8 backdrop-blur-xl"
+          >
+            <div className="px-5 pt-5 pb-4">
+              <div className="flex items-center gap-2 text-[#fbbf24]">
+                <Sparkles size={14} strokeWidth={2.5} />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                  {mode === "auto"
+                    ? `Auto-actioned at ${state.inferredAt}`
+                    : `Detected at ${state.inferredAt}`}
+                </span>
+              </div>
+              <p className="mt-2 text-[15px] leading-snug text-white/90">
+                {state.rationale}
+              </p>
+            </div>
 
-          {/* Auto: action list with undo */}
-          {mode === "auto" && (
-            <>
-              <div className="mx-5 h-px bg-white/8" />
-              <ul className="px-2 py-2">
-                {state.actions.map((a, i) => {
-                  const Icon = a.icon;
-                  return (
-                    <motion.li
-                      key={a.id}
-                      initial={{ x: -10, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: 0.95 + i * 0.18, duration: 0.5 }}
-                      className="flex items-start gap-3 rounded-2xl px-3 py-2.5"
-                    >
-                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fbbf24]/15 text-[#fbbf24]">
-                        <Icon size={15} strokeWidth={2.4} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-medium text-white">
-                          {a.label}
-                        </p>
-                        <p className="text-[12px] text-white/55">{a.device}</p>
-                      </div>
-                      <button className="flex shrink-0 items-center gap-1 rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-medium text-white/70 ring-1 ring-white/10">
-                        <RotateCcw size={11} strokeWidth={2.4} />
-                        Undo
-                      </button>
-                    </motion.li>
-                  );
-                })}
-              </ul>
-            </>
+            {/* Auto: action list with undo */}
+            {mode === "auto" && visibleActions.length > 0 && (
+              <>
+                <div className="mx-5 h-px bg-white/8" />
+                <ul className="px-2 py-2">
+                  <AnimatePresence initial={false}>
+                    {visibleActions.map((a, i) => {
+                      const Icon = a.icon;
+                      return (
+                        <motion.li
+                          key={a.id}
+                          layout
+                          initial={{ x: -10, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
+                          transition={{ delay: i === 0 ? 0.95 : 0, duration: 0.35 }}
+                          className="flex items-start gap-3 rounded-2xl px-3 py-2.5"
+                        >
+                          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fbbf24]/15 text-[#fbbf24]">
+                            <Icon size={15} strokeWidth={2.4} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[14px] font-medium text-white">
+                              {a.label}
+                            </p>
+                            <p className="text-[12px] text-white/55">{a.device}</p>
+                          </div>
+                          <button
+                            onClick={() => undoAuto(a.id)}
+                            className="flex shrink-0 items-center gap-1 rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-medium text-white/70 ring-1 ring-white/10"
+                          >
+                            <RotateCcw size={11} strokeWidth={2.4} />
+                            Undo
+                          </button>
+                        </motion.li>
+                      );
+                    })}
+                  </AnimatePresence>
+                </ul>
+              </>
+            )}
+
+            <div className="flex items-center justify-between border-t border-white/8 px-5 py-3">
+              <button
+                onClick={onOpenPresence}
+                className="text-[13px] font-medium text-[#8ab4f8]"
+              >
+                See how I knew →
+              </button>
+              <button
+                onClick={onOpenFeedback}
+                className="rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-black"
+              >
+                Did we get this right?
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Undone pill */}
+        <AnimatePresence>
+          {undoPill && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className="mx-auto mt-3 flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium text-white/80 ring-1 ring-white/10 backdrop-blur"
+            >
+              <RotateCcw size={11} strokeWidth={2.4} />
+              Undone
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          <div className="flex items-center justify-between border-t border-white/8 px-5 py-3">
-            <button
-              onClick={onOpenPresence}
-              className="text-[13px] font-medium text-[#8ab4f8]"
-            >
-              See how I knew →
-            </button>
-            <button
-              onClick={onOpenFeedback}
-              className="rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-black"
-            >
-              Did we get this right?
-            </button>
-          </div>
-        </motion.div>
-
-        {/* PENDING SUGGESTIONS — Suggest Mode only */}
-        {mode === "suggest" && pending.length > 0 && (
+        {/* PENDING SUGGESTIONS — Suggest Mode only, not while learning */}
+        {mode === "suggest" && !learning && pending.length > 0 && (
           <Section
             title="Pending suggestions"
             count={pending.length}
@@ -295,77 +412,114 @@ export function HomeScreen({
         )}
 
         {/* JUST DONE — Suggest Mode only (auto mode shows actions in hero card) */}
-        {mode === "suggest" && confirmed.length > 0 && (
+        {mode === "suggest" && !learning && confirmed.length > 0 && (
           <Section title="Just done" count={confirmed.length} delay={1.1}>
             <ul className="space-y-1.5 px-4">
-              {confirmed.map((s) => (
-                <motion.li
-                  key={s.id}
-                  layout
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-3 rounded-2xl bg-emerald-500/10 px-3 py-2.5 ring-1 ring-emerald-400/25"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
-                    <s.icon size={15} strokeWidth={2.4} />
-                  </div>
-                  <p className="flex-1 truncate text-[13px] font-medium text-white">
-                    {s.label}
-                  </p>
-                  <button className="flex items-center gap-1 rounded-full bg-white/8 px-2 py-0.5 text-[11px] text-white/70">
-                    <RotateCcw size={10} strokeWidth={2.4} />
-                    Undo
-                  </button>
-                </motion.li>
-              ))}
+              <AnimatePresence initial={false}>
+                {confirmed.map((s) => (
+                  <motion.li
+                    key={s.id}
+                    layout
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                    className="flex items-center gap-3 rounded-2xl bg-emerald-500/10 px-3 py-2.5 ring-1 ring-emerald-400/25"
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300">
+                      <s.icon size={15} strokeWidth={2.4} />
+                    </div>
+                    <p className="flex-1 truncate text-[13px] font-medium text-white">
+                      {s.label}
+                    </p>
+                    <button
+                      onClick={() => undoConfirmed(s)}
+                      className="flex items-center gap-1 rounded-full bg-white/8 px-2 py-0.5 text-[11px] text-white/70"
+                    >
+                      <RotateCcw size={10} strokeWidth={2.4} />
+                      Undo
+                    </button>
+                  </motion.li>
+                ))}
+              </AnimatePresence>
             </ul>
           </Section>
         )}
 
         {/* NEEDS YOUR ATTENTION */}
-        <Section title="Needs your attention" count={anomalies.length} delay={1.4}>
-          <div className="space-y-2 px-4">
-            {anomalies.map((a, i) => {
-              const Icon = a.icon;
-              const tint =
-                a.tone === "warn"
-                  ? "bg-rose-500/12 text-rose-300 ring-rose-400/25"
-                  : "bg-amber-400/12 text-amber-300 ring-amber-400/25";
-              return (
-                <motion.div
-                  key={a.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.5 + i * 0.08, duration: 0.4 }}
-                  className={cn(
-                    "flex items-start gap-3 rounded-2xl bg-[#16191c] p-3 ring-1 ring-white/5"
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ring-1",
-                      tint
-                    )}
-                  >
-                    <Icon size={16} strokeWidth={2.2} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold text-white">{a.title}</p>
-                    <p className="text-[11px] text-white/55">{a.detail}</p>
-                  </div>
-                  <button className="shrink-0 self-center rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-black">
-                    {a.actionLabel}
-                  </button>
-                </motion.div>
-              );
-            })}
-          </div>
-        </Section>
+        {visibleAnomalies.length > 0 && (
+          <Section
+            title="Needs your attention"
+            count={visibleAnomalies.length}
+            delay={1.4}
+          >
+            <div className="space-y-2 px-4">
+              <AnimatePresence initial={false}>
+                {visibleAnomalies.map((a, i) => {
+                  const Icon = a.icon;
+                  const acted = anomalyActed.has(a.id);
+                  const tint =
+                    a.tone === "warn"
+                      ? "bg-rose-500/12 text-rose-300 ring-rose-400/25"
+                      : "bg-amber-400/12 text-amber-300 ring-amber-400/25";
+                  return (
+                    <motion.div
+                      key={a.id}
+                      layout
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      transition={{ delay: 1.5 + i * 0.08, duration: 0.4 }}
+                      className={cn(
+                        "flex items-start gap-3 rounded-2xl p-3 ring-1 transition",
+                        acted
+                          ? "bg-emerald-500/10 ring-emerald-400/30"
+                          : "bg-[#16191c] ring-white/5"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ring-1",
+                          acted
+                            ? "bg-emerald-500/20 text-emerald-300 ring-emerald-400/30"
+                            : tint
+                        )}
+                      >
+                        {acted ? (
+                          <Check size={16} strokeWidth={2.6} />
+                        ) : (
+                          <Icon size={16} strokeWidth={2.2} />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold text-white">
+                          {a.title}
+                        </p>
+                        <p className="text-[11px] text-white/55">{a.detail}</p>
+                      </div>
+                      {acted ? (
+                        <span className="shrink-0 self-center rounded-full bg-emerald-500/20 px-3 py-1.5 text-[12px] font-semibold text-emerald-300 ring-1 ring-emerald-400/30">
+                          {pastTense[a.actionLabel] ?? "Done"}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => actOnAnomaly(a.id)}
+                          className="shrink-0 self-center rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-black"
+                        >
+                          {a.actionLabel}
+                        </button>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          </Section>
+        )}
 
         {/* QUICK CONTROLS */}
         <Section title="Quick controls" delay={1.6}>
           <div className="grid grid-cols-2 gap-3 px-4">
-            {quickControls.map((c, i) => {
+            {homeData.quickControls.map((c, i) => {
               const Icon = c.icon;
               return (
                 <motion.div
@@ -428,7 +582,10 @@ export function HomeScreen({
         </Section>
 
         {/* All devices link */}
-        <button className="mx-4 mt-4 flex w-[calc(100%-2rem)] items-center justify-between rounded-2xl bg-[#16191c] px-4 py-3 ring-1 ring-white/5">
+        <button
+          onClick={onOpenAllDevices}
+          className="mx-4 mt-4 flex w-[calc(100%-2rem)] items-center justify-between rounded-2xl bg-[#16191c] px-4 py-3 ring-1 ring-white/5"
+        >
           <span className="text-[13px] font-medium text-white/85">
             All {home.deviceCount} devices
           </span>

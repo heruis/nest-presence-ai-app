@@ -10,35 +10,71 @@ import {
   DoorOpen,
   Lightbulb,
   ChevronRight,
+  Lock,
 } from "lucide-react";
 import { StatusBar } from "@/components/status-bar";
 import { GlobalHeader } from "@/components/global-header";
-import { weeklyMetrics, type HomeLocation, type HouseholdMember } from "@/lib/data";
+import {
+  type HomeLocation,
+  type HouseholdMember,
+  type HomeDataSet,
+} from "@/lib/data";
 import { cn } from "@/lib/cn";
 
-const timeline = [
-  { day: "Mon", actions: 11, big: "Last Person Left fired 3×" },
-  { day: "Tue", actions: 14, big: "Morning Wake at 7:08" },
-  { day: "Wed", actions: 9, big: "Guest Detected — held auto-lock" },
-  { day: "Thu", actions: 13, big: "Pre-warmed for 5:42 PM arrival" },
-  { day: "Fri", actions: 16, big: "Night Wind-Down at 10:48" },
-  { day: "Sat", actions: 8, big: "You corrected 'we were having a party'" },
-  { day: "Sun", actions: 13, big: "Morning Wake — today" },
-];
-
-const max = Math.max(...timeline.map((d) => d.actions));
-
 export function ReportScreen({
+  localOnly,
+  homeData,
   home,
   me,
   onOpenHomeSwitcher,
   onOpenProfile,
 }: {
+  localOnly: boolean;
+  homeData: HomeDataSet;
   home: HomeLocation;
   me: HouseholdMember;
   onOpenHomeSwitcher: () => void;
   onOpenProfile: () => void;
 }) {
+  const { weeklyMetrics, timeline, weeklyHeadline } = homeData;
+  const max = Math.max(...timeline.map((d) => d.actions));
+  const hero = weeklyMetrics[0];
+  const showHighlights = weeklyHeadline.count > 40; // Beverly Hills only — Tahoe is too quiet to populate
+
+  if (localOnly) {
+    return (
+      <div className="aurora h-full w-full overflow-y-auto no-scrollbar pb-32">
+        <StatusBar tone="light" />
+        <GlobalHeader
+          home={home}
+          me={me}
+          onOpenHomeSwitcher={onOpenHomeSwitcher}
+          onOpenProfile={onOpenProfile}
+        />
+        <div className="px-6 pt-7">
+          <div className="flex items-center gap-2 text-[#8ab4f8]">
+            <Sparkles size={14} strokeWidth={2.5} />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.16em]">
+              Home Intelligence · This week
+            </span>
+          </div>
+        </div>
+        <div className="mx-4 mt-6 rounded-3xl bg-[#16191c] p-6 ring-1 ring-emerald-400/20">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/15 text-emerald-300">
+            <Lock size={22} strokeWidth={2.2} />
+          </div>
+          <p className="mt-4 text-[16px] font-semibold tracking-tight text-white">
+            Disabled by Local-only mode
+          </p>
+          <p className="mt-2 text-[13px] leading-snug text-white/65">
+            Your data never leaves your home — so weekly summaries don't get computed
+            in the cloud. Turn off Local-only in Settings to see this report.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="aurora h-full w-full overflow-y-auto no-scrollbar pb-32">
       <StatusBar tone="light" />
@@ -59,10 +95,10 @@ export function ReportScreen({
         <h1 className="mt-1 text-[28px] font-semibold leading-tight tracking-tight text-white">
           Your home worked
           <br />
-          84 times for you.
+          {weeklyHeadline.count} times for you.
         </h1>
         <p className="mt-2 text-[13px] leading-snug text-white/60">
-          Apr 28 – May 5 · No voice commands. No manual routines.
+          {weeklyHeadline.subtitle}
         </p>
       </div>
 
@@ -78,15 +114,14 @@ export function ReportScreen({
             <Zap size={20} strokeWidth={2.2} />
           </div>
           <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
-            +22% vs. last week
+            {hero.delta}
           </span>
         </div>
         <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-white/60">
-          Energy saved
+          {hero.label}
         </p>
         <p className="mt-1 text-[44px] font-semibold leading-none tracking-tight text-white tabular-nums">
-          14.7
-          <span className="ml-1 text-[20px] font-medium text-white/60">kWh</span>
+          {hero.value}
         </p>
       </motion.div>
 
@@ -159,43 +194,57 @@ export function ReportScreen({
       </div>
 
       {/* highlights */}
-      <div className="px-5 pt-6">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
-          Highlights
-        </p>
-      </div>
-      <div className="mt-2 space-y-2 px-4">
-        <Highlight
-          icon={<ShieldCheck size={18} strokeWidth={2.2} />}
-          title="29 security actions"
-          body="You left the house 11 times. Doors locked, cameras armed, every time."
-          tint="sky"
-        />
-        <Highlight
-          icon={<DoorOpen size={18} strokeWidth={2.2} />}
-          title="Saved 4 minutes of door-checking"
-          body="No 'did I lock it?' second-guessing all week."
-          tint="indigo"
-        />
-        <Highlight
-          icon={<Lightbulb size={18} strokeWidth={2.2} />}
-          title="14 lighting auto-actions"
-          body="Sunset and sunrise tuned to your real wake/sleep times — not a static schedule."
-          tint="amber"
-        />
-        <Highlight
-          icon={<Sunrise size={18} strokeWidth={2.2} />}
-          title="Morning Wake fired 6 of 7 days"
-          body="Held back Saturday after you flagged 'we were having a party' Friday night."
-          tint="rose"
-        />
-        <Highlight
-          icon={<Moon size={18} strokeWidth={2.2} />}
-          title="Night Wind-Down accuracy 94%"
-          body="One correction, applied. Won't auto-dim Saturdays before midnight anymore."
-          tint="violet"
-        />
-      </div>
+      {showHighlights ? (
+        <>
+          <div className="px-5 pt-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
+              Highlights
+            </p>
+          </div>
+          <div className="mt-2 space-y-2 px-4">
+            <Highlight
+              icon={<ShieldCheck size={18} strokeWidth={2.2} />}
+              title="29 security actions"
+              body="You left the house 11 times. Doors locked, cameras armed, every time."
+              tint="sky"
+            />
+            <Highlight
+              icon={<DoorOpen size={18} strokeWidth={2.2} />}
+              title="Saved 4 minutes of door-checking"
+              body="No 'did I lock it?' second-guessing all week."
+              tint="indigo"
+            />
+            <Highlight
+              icon={<Lightbulb size={18} strokeWidth={2.2} />}
+              title="14 lighting auto-actions"
+              body="Sunset and sunrise tuned to your real wake/sleep times — not a static schedule."
+              tint="amber"
+            />
+            <Highlight
+              icon={<Sunrise size={18} strokeWidth={2.2} />}
+              title="Morning Wake fired 6 of 7 days"
+              body="Held back Saturday after you flagged 'we were having a party' Friday night."
+              tint="rose"
+            />
+            <Highlight
+              icon={<Moon size={18} strokeWidth={2.2} />}
+              title="Night Wind-Down ran 6 of 7 nights"
+              body="One correction, applied. Won't auto-dim Saturdays before midnight anymore."
+              tint="violet"
+            />
+          </div>
+        </>
+      ) : (
+        <div className="mx-4 mt-6 rounded-3xl bg-[#16191c] p-5 ring-1 ring-white/5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
+            A quiet week
+          </p>
+          <p className="mt-2 text-[14px] leading-snug text-white/85">
+            {home.shortName} stayed in vacation mode all week. Cameras armed, thermostat
+            held at 55°, evening lights ran on schedule.
+          </p>
+        </div>
+      )}
 
       {/* email CTA */}
       <button className="mx-4 mt-6 flex w-[calc(100%-2rem)] items-center justify-between rounded-2xl bg-[#16191c] px-4 py-3.5 ring-1 ring-white/8">

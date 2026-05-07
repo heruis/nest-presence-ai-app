@@ -518,7 +518,7 @@ export const weeklyMetrics: WeeklyMetric[] = [
   { label: "Energy saved", value: "14.7 kWh", delta: "+22% vs. last week", positive: true },
   { label: "Auto-actions", value: "84", delta: "29 security · 41 comfort · 14 lighting", positive: true },
   { label: "Times we asked you first", value: "11", delta: "Down from 18 last week", positive: true },
-  { label: "Override rate", value: "4.1%", delta: "Below 8% guardrail", positive: true },
+  { label: "Auto-actions kept", value: "82 of 84", delta: "Only 2 corrections this week", positive: true },
 ];
 
 // =============================================================================
@@ -559,4 +559,303 @@ export const recentFeedback: FeedbackHistoryItem[] = [
     appliedTo: "Added to household faces",
     ts: "Sat · 3:12 PM",
   },
+];
+
+// =============================================================================
+// Per-home data sets (per AMENDMENTS #7d — Tahoe gets its own state, anomalies,
+// quick controls, weekly metrics, timeline)
+// =============================================================================
+
+export type WeeklyTimelineDay = { day: string; actions: number; big: string };
+
+export type HomeDataSet = {
+  activeState: HomeState;
+  anomalies: Anomaly[];
+  quickControls: QuickControl[];
+  weeklyMetrics: WeeklyMetric[];
+  timeline: WeeklyTimelineDay[];
+  pendingSuggestions: PendingSuggestion[];
+  weeklyHeadline: { count: number; subtitle: string };
+};
+
+const beverlyHillsTimeline: WeeklyTimelineDay[] = [
+  { day: "Mon", actions: 11, big: "Last Person Left fired 3×" },
+  { day: "Tue", actions: 14, big: "Morning Wake at 7:08" },
+  { day: "Wed", actions: 9, big: "Guest Detected — held auto-lock" },
+  { day: "Thu", actions: 13, big: "Pre-warmed for 5:42 PM arrival" },
+  { day: "Fri", actions: 16, big: "Night Wind-Down at 10:48" },
+  { day: "Sat", actions: 8, big: "You corrected 'we were having a party'" },
+  { day: "Sun", actions: 13, big: "Morning Wake — today" },
+];
+
+export const beverlyHillsData: HomeDataSet = {
+  activeState: morningWake,
+  anomalies,
+  quickControls,
+  weeklyMetrics,
+  timeline: beverlyHillsTimeline,
+  pendingSuggestions,
+  weeklyHeadline: { count: 84, subtitle: "Apr 28 – May 5 · No voice commands. No manual routines." },
+};
+
+// Tahoe: vacation home in Last-Person-Left for 47 hours
+export const tahoeQuietState: HomeState = {
+  id: "last-person-left",
+  name: "Empty · Watching",
+  icon: DoorOpen,
+  accent: "blue",
+  confidence: 96,
+  inferredAt: "2 days ago",
+  signals: [
+    { id: "geofence", label: "No phones in geofence", detail: "Residents 280 mi away", icon: MapPin },
+    { id: "camera", label: "No motion 47 hr", detail: "All zones quiet", icon: Camera },
+    { id: "calendar", label: "No upcoming events", detail: "Open through next weekend", icon: Calendar },
+    { id: "time", label: "Long-vacant pattern", detail: "Typical for weekdays", icon: Clock },
+  ],
+  rationale: "All phones away for two days. Cameras armed, HVAC in vacation mode.",
+  actions: [
+    {
+      id: "tahoe-cams",
+      label: "Cameras armed (Vacation)",
+      device: "Nest Cam (2)",
+      icon: Camera,
+      detail: "Activity zones live",
+      status: "executed",
+    },
+    {
+      id: "tahoe-temp",
+      label: "Thermostat → 55°F vacation",
+      device: "Nest Learning",
+      icon: Thermometer,
+      detail: "Freeze-protect enabled",
+      status: "executed",
+    },
+    {
+      id: "tahoe-lights",
+      label: "Random evening lights, 7–10 PM",
+      device: "Hue",
+      icon: Lightbulb,
+      detail: "Anti-burglary pattern",
+      status: "executed",
+    },
+  ],
+};
+
+const tahoeAnomalies: Anomaly[] = [
+  {
+    id: "tahoe-doorbell",
+    title: "Doorbell offline 3 hr",
+    detail: "Last seen 4:14 AM — likely Wi-Fi blip",
+    icon: WifiOff,
+    actionLabel: "Reconnect",
+    tone: "warn",
+  },
+  {
+    id: "tahoe-bat",
+    title: "Front lock battery at 14%",
+    detail: "Replace on next visit",
+    icon: Battery,
+    actionLabel: "Remind me",
+    tone: "info",
+  },
+];
+
+const tahoeQuickControls: QuickControl[] = [
+  {
+    id: "tahoe-temp",
+    name: "Thermostat",
+    state: "Vacation · 55°",
+    icon: Thermometer,
+    primaryMetric: "55°",
+    on: false,
+    why: "Long-away mode",
+  },
+  {
+    id: "tahoe-cams",
+    name: "Cameras",
+    state: "Armed · Vacation",
+    icon: Camera,
+    on: true,
+    why: "Empty home",
+  },
+  {
+    id: "tahoe-lock",
+    name: "Front Lock",
+    state: "Locked 47 hr",
+    icon: Lock,
+    on: true,
+    why: "Auto-locked",
+  },
+  {
+    id: "tahoe-lights",
+    name: "Living Lights",
+    state: "Random · 7–10 PM",
+    icon: Lightbulb,
+    on: false,
+    why: "Anti-burglary",
+  },
+];
+
+const tahoeWeeklyMetrics: WeeklyMetric[] = [
+  { label: "Energy saved", value: "31.2 kWh", delta: "+8% vs. last week", positive: true },
+  { label: "Auto-actions", value: "12", delta: "All security · vacation mode", positive: true },
+  { label: "Times we asked you first", value: "0", delta: "Quiet week, no corrections", positive: true },
+  { label: "Auto-actions kept", value: "12 of 12", delta: "Nothing to undo", positive: true },
+];
+
+const tahoeTimeline: WeeklyTimelineDay[] = [
+  { day: "Mon", actions: 2, big: "Cameras stayed armed" },
+  { day: "Tue", actions: 1, big: "Thermostat held at 55°" },
+  { day: "Wed", actions: 2, big: "Random evening lights ran" },
+  { day: "Thu", actions: 1, big: "Quiet — no triggers" },
+  { day: "Fri", actions: 2, big: "Doorbell delivered to Hub Max" },
+  { day: "Sat", actions: 2, big: "Snow detected — heating tap" },
+  { day: "Sun", actions: 2, big: "Random lights, 7–10 PM" },
+];
+
+const tahoePendingSuggestions: PendingSuggestion[] = [
+  {
+    id: "tahoe-ps-bat",
+    label: "Order new lock battery",
+    device: "Nest x Yale · Front",
+    icon: Battery,
+    rationale: "Battery at 14% — usually lasts 4 weeks at this rate",
+    signalCount: "2 of 2 sources agree",
+  },
+];
+
+export const tahoeData: HomeDataSet = {
+  activeState: tahoeQuietState,
+  anomalies: tahoeAnomalies,
+  quickControls: tahoeQuickControls,
+  weeklyMetrics: tahoeWeeklyMetrics,
+  timeline: tahoeTimeline,
+  pendingSuggestions: tahoePendingSuggestions,
+  weeklyHeadline: { count: 12, subtitle: "Apr 28 – May 5 · House has been empty all week." },
+};
+
+export function dataForHome(homeId: string): HomeDataSet {
+  if (homeId === "tahoe-cabin") return tahoeData;
+  return beverlyHillsData;
+}
+
+// =============================================================================
+// All-devices list (Q1 decision A — functional sheet, grouped by function)
+// =============================================================================
+
+export type DeviceItem = {
+  id: string;
+  name: string;
+  state: string;
+  icon: LucideIcon;
+  on: boolean;
+};
+
+export type DeviceGroup = {
+  label: "Lighting" | "Climate" | "Security" | "Speakers";
+  icon: LucideIcon;
+  devices: DeviceItem[];
+};
+
+export const beverlyHillsDevices: DeviceGroup[] = [
+  {
+    label: "Lighting",
+    icon: Lightbulb,
+    devices: [
+      { id: "bh-l1", name: "Bedroom lights", state: "On · 35%", icon: Lightbulb, on: true },
+      { id: "bh-l2", name: "Kitchen lights", state: "On · 60%", icon: Lightbulb, on: true },
+      { id: "bh-l3", name: "Living room lights", state: "Off", icon: Lightbulb, on: false },
+      { id: "bh-l4", name: "Porch light", state: "Off", icon: Lightbulb, on: false },
+    ],
+  },
+  {
+    label: "Climate",
+    icon: Thermometer,
+    devices: [
+      { id: "bh-c1", name: "Main thermostat", state: "Heating · 71°F", icon: Thermometer, on: true },
+    ],
+  },
+  {
+    label: "Security",
+    icon: Lock,
+    devices: [
+      { id: "bh-s1", name: "Front door lock", state: "Unlocked", icon: Lock, on: false },
+      { id: "bh-s2", name: "Back door lock", state: "Locked", icon: Lock, on: true },
+      { id: "bh-s3", name: "Front Nest Cam", state: "Paused (home)", icon: Camera, on: false },
+      { id: "bh-s4", name: "Backyard Nest Cam", state: "Paused (home)", icon: Camera, on: false },
+      { id: "bh-s5", name: "Kitchen Hub Max cam", state: "Paused (home)", icon: Camera, on: false },
+      { id: "bh-s6", name: "Doorbell", state: "Online", icon: Eye, on: true },
+    ],
+  },
+  {
+    label: "Speakers",
+    icon: Volume2,
+    devices: [
+      { id: "bh-h1", name: "Kitchen Hub Max", state: "Briefing playing", icon: Volume2, on: true },
+      { id: "bh-h2", name: "Bedroom speaker", state: "Idle", icon: Volume2, on: false },
+    ],
+  },
+];
+
+export const tahoeDevices: DeviceGroup[] = [
+  {
+    label: "Lighting",
+    icon: Lightbulb,
+    devices: [
+      { id: "th-l1", name: "Living lights", state: "Scheduled · 7–10 PM", icon: Lightbulb, on: false },
+      { id: "th-l2", name: "Porch light", state: "Off", icon: Lightbulb, on: false },
+    ],
+  },
+  {
+    label: "Climate",
+    icon: Thermometer,
+    devices: [
+      { id: "th-c1", name: "Cabin thermostat", state: "Vacation · 55°F", icon: Thermometer, on: false },
+    ],
+  },
+  {
+    label: "Security",
+    icon: Lock,
+    devices: [
+      { id: "th-s1", name: "Front door lock", state: "Locked 47 hr", icon: Lock, on: true },
+      { id: "th-s2", name: "Driveway Nest Cam", state: "Armed · Vacation", icon: Camera, on: true },
+      { id: "th-s3", name: "Living room Nest Cam", state: "Armed · Vacation", icon: Camera, on: true },
+      { id: "th-s4", name: "Doorbell", state: "Offline 3 hr", icon: WifiOff, on: false },
+    ],
+  },
+  {
+    label: "Speakers",
+    icon: Volume2,
+    devices: [],
+  },
+];
+
+export function devicesForHome(homeId: string): DeviceGroup[] {
+  if (homeId === "tahoe-cabin") return tahoeDevices;
+  return beverlyHillsDevices;
+}
+
+// =============================================================================
+// Privacy: "Who knows what" — per-member signal permissioning
+// (per AMENDMENTS #7e — household consent surface)
+// =============================================================================
+
+export type PrivacySignal = "location" | "face" | "calendar" | "voice";
+
+export const signalLabels: Record<PrivacySignal, string> = {
+  location: "Location",
+  face: "Face recognition",
+  calendar: "Calendar",
+  voice: "Voice match",
+};
+
+export type MemberPrivacy = {
+  memberId: string;
+  signals: Partial<Record<PrivacySignal, boolean>>;
+};
+
+export const memberPrivacy: MemberPrivacy[] = [
+  { memberId: "you", signals: { location: true, face: true, calendar: true, voice: true } },
+  { memberId: "yuna", signals: { location: true, face: true, calendar: true, voice: false } },
+  { memberId: "mom", signals: { location: false, face: true, calendar: false, voice: false } },
 ];

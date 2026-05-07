@@ -29,26 +29,28 @@ const learningCopy: Record<Outcome, { title: string; rule: string; impact: strin
   correct: {
     title: "Locking it in",
     rule: "Sunday 7:00–7:20 AM wake remains the strong default",
-    impact: "Morning Wake confidence will tick up to 96%.",
+    impact: "We'll lock this pattern in for next Sunday.",
   },
   partial: {
     title: "Tuning the action set",
     rule: "We'll keep detecting Morning Wake but adjust which actions auto-fire",
-    impact: "Confidence holds; only flagged actions retrain.",
+    impact: "Only flagged actions will retrain; the rest stay.",
   },
   wrong: {
     title: "Holding back next Sunday",
     rule: "Sunday 7 AM Morning Wake will require a second signal to fire",
-    impact: "Confidence drops to 78%, falls below auto threshold.",
+    impact: "We'll ask you first next Sunday at 7 AM.",
   },
 };
 
 export function FeedbackScreen({
+  localOnly,
   home,
   me,
   onOpenHomeSwitcher,
   onOpenProfile,
 }: {
+  localOnly: boolean;
   home: HomeLocation;
   me: HouseholdMember;
   onOpenHomeSwitcher: () => void;
@@ -150,18 +152,20 @@ export function FeedbackScreen({
                   exit={{ y: -8, opacity: 0 }}
                   transition={{ duration: 0.35 }}
                 >
-                  {/* note + suggestions */}
+                  {/* note + suggestions — textarea hidden in Local-only mode */}
                   <div className="mx-4 mt-5 rounded-3xl bg-[#16191c] p-4 ring-1 ring-white/6">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
-                      Add a quick note (optional)
+                      {localOnly ? "Pick the closest reason" : "Add a quick note (optional)"}
                     </p>
-                    <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      placeholder='e.g. "We were hosting a guest"'
-                      className="mt-2 h-20 w-full resize-none rounded-2xl bg-[#1f2327] px-3 py-2.5 text-[13px] text-white placeholder:text-white/30 outline-none ring-1 ring-white/5 focus:ring-[#8ab4f8]/50"
-                    />
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                    {!localOnly && (
+                      <textarea
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        placeholder='e.g. "We were hosting a guest"'
+                        className="mt-2 h-20 w-full resize-none rounded-2xl bg-[#1f2327] px-3 py-2.5 text-[13px] text-white placeholder:text-white/30 outline-none ring-1 ring-white/5 focus:ring-[#8ab4f8]/50"
+                      />
+                    )}
+                    <div className={cn("flex flex-wrap gap-1.5", localOnly ? "mt-1" : "mt-2")}>
                       {suggestions[outcome].map((s) => (
                         <button
                           key={s}
@@ -172,6 +176,11 @@ export function FeedbackScreen({
                         </button>
                       ))}
                     </div>
+                    {localOnly && (
+                      <p className="mt-3 text-[10px] uppercase tracking-wider text-emerald-300/80">
+                        Local-only · stays on-device
+                      </p>
+                    )}
                   </div>
 
                   {/* learning preview */}

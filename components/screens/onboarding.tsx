@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
   HandHelping,
@@ -13,17 +13,41 @@ import {
   Smartphone,
   Camera,
   Calendar as CalIcon,
+  Check,
+  Shield,
+  MapPin,
+  ScanFace,
+  Mic,
 } from "lucide-react";
 import { StatusBar } from "@/components/status-bar";
 import { GlobalHeader } from "@/components/global-header";
 import { cn } from "@/lib/cn";
-import type { HomeLocation, HouseholdMember } from "@/lib/data";
+import {
+  householdMembers,
+  memberPrivacy,
+  signalLabels,
+  type PrivacySignal,
+  type HomeLocation,
+  type HouseholdMember,
+} from "@/lib/data";
 
 export type Mode = "suggest" | "auto";
+
+const signalIcons: Record<PrivacySignal, typeof MapPin> = {
+  location: MapPin,
+  face: ScanFace,
+  calendar: CalIcon,
+  voice: Mic,
+};
 
 export function OnboardingScreen({
   mode,
   setMode,
+  learning,
+  setLearning,
+  localOnly,
+  setLocalOnly,
+  onActivate,
   home,
   me,
   onOpenHomeSwitcher,
@@ -31,13 +55,26 @@ export function OnboardingScreen({
 }: {
   mode: Mode;
   setMode: (m: Mode) => void;
+  learning: boolean;
+  setLearning: (v: boolean) => void;
+  localOnly: boolean;
+  setLocalOnly: (v: boolean) => void;
+  onActivate: (m: Mode) => void;
   home: HomeLocation;
   me: HouseholdMember;
   onOpenHomeSwitcher: () => void;
   onOpenProfile: () => void;
 }) {
-  const [learning, setLearning] = useState(true);
-  const [localOnly, setLocalOnly] = useState(false);
+  const [activating, setActivating] = useState(false);
+
+  const activate = () => {
+    if (activating) return;
+    setActivating(true);
+    window.setTimeout(() => {
+      onActivate(mode);
+      setActivating(false);
+    }, 600);
+  };
 
   return (
     <div className="aurora h-full w-full overflow-y-auto no-scrollbar pb-32">
@@ -119,13 +156,113 @@ export function OnboardingScreen({
         </div>
       </div>
 
+      {/* who knows what — privacy panel (AMENDMENTS #7e) */}
+      <div className="mx-4 mt-4 rounded-3xl bg-[#16191c] p-4 ring-1 ring-white/5">
+        <div className="flex items-center gap-2 text-emerald-300">
+          <Shield size={14} strokeWidth={2.4} />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+            Who knows what
+          </p>
+        </div>
+        <p className="mt-1 text-[12px] leading-snug text-white/55">
+          What each person lets Presence AI use about them.
+        </p>
+        <ul className="mt-3 space-y-2">
+          {memberPrivacy.map((mp) => {
+            const member = householdMembers.find((m) => m.id === mp.memberId);
+            if (!member) return null;
+            const enabled = (Object.keys(signalLabels) as PrivacySignal[]).filter(
+              (k) => mp.signals[k]
+            );
+            return (
+              <li
+                key={mp.memberId}
+                className="flex items-start gap-3 rounded-2xl bg-[#1f2327] p-3"
+              >
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white"
+                  style={{ background: member.color }}
+                >
+                  {member.initial}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[13px] font-semibold text-white">
+                      {member.name}
+                    </p>
+                    <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/55">
+                      {member.role}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {(Object.keys(signalLabels) as PrivacySignal[]).map((k) => {
+                      const SignalIcon = signalIcons[k];
+                      const on = mp.signals[k] === true;
+                      return (
+                        <span
+                          key={k}
+                          className={cn(
+                            "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                            on
+                              ? "bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-400/25"
+                              : "bg-white/5 text-white/40 line-through decoration-white/30"
+                          )}
+                        >
+                          <SignalIcon size={10} strokeWidth={2.4} />
+                          {signalLabels[k]}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {enabled.length === 0 && (
+                    <p className="mt-1.5 text-[11px] text-white/45">
+                      Nothing — guest mode
+                    </p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
       {/* primary CTA */}
       <motion.button
+        onClick={activate}
         whileTap={{ scale: 0.98 }}
-        className="mx-4 mt-5 flex w-[calc(100%-2rem)] items-center justify-center gap-2 rounded-full bg-white py-3.5 text-[14px] font-semibold text-black"
+        disabled={activating}
+        className={cn(
+          "mx-4 mt-5 flex w-[calc(100%-2rem)] items-center justify-center gap-2 rounded-full py-3.5 text-[14px] font-semibold transition",
+          activating ? "bg-emerald-400 text-emerald-950" : "bg-white text-black"
+        )}
       >
-        Activate Presence AI in {mode === "auto" ? "Auto" : "Suggest"} Mode
-        <ChevronRight size={16} strokeWidth={2.6} />
+        <AnimatePresence mode="wait" initial={false}>
+          {activating ? (
+            <motion.span
+              key="check"
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.6, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="flex items-center gap-2"
+            >
+              <Check size={16} strokeWidth={3} />
+              Activated
+            </motion.span>
+          ) : (
+            <motion.span
+              key="label"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="flex items-center gap-2"
+            >
+              Activate Presence AI in {mode === "auto" ? "Auto" : "Suggest"} Mode
+              <ChevronRight size={16} strokeWidth={2.6} />
+            </motion.span>
+          )}
+        </AnimatePresence>
       </motion.button>
 
       <p className="mx-6 mt-3 text-center text-[11px] leading-snug text-white/45">

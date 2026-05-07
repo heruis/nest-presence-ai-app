@@ -4,7 +4,13 @@ import { motion } from "framer-motion";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { StatusBar } from "@/components/status-bar";
 import { GlobalHeader } from "@/components/global-header";
-import { allStates, type HomeState, type HomeLocation, type HouseholdMember } from "@/lib/data";
+import {
+  allStates,
+  type HomeState,
+  type HomeLocation,
+  type HouseholdMember,
+  type HomeDataSet,
+} from "@/lib/data";
 import { cn } from "@/lib/cn";
 
 const accentMap: Record<string, { ring: string; bg: string; text: string }> = {
@@ -93,18 +99,20 @@ function StateRow({ state, index }: { state: HomeState; index: number }) {
 }
 
 export function PresenceAIScreen({
+  homeData,
   home,
   me,
   onOpenHomeSwitcher,
   onOpenProfile,
 }: {
+  homeData: HomeDataSet;
   home: HomeLocation;
   me: HouseholdMember;
   onOpenHomeSwitcher: () => void;
   onOpenProfile: () => void;
 }) {
-  const active = allStates[0]; // morning wake
-  const others = allStates.slice(1);
+  const active = homeData.activeState;
+  const others = allStates.filter((s) => s.id !== active.id);
 
   return (
     <div className="aurora h-full w-full overflow-y-auto no-scrollbar pb-32">

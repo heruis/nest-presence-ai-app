@@ -128,4 +128,57 @@ When in doubt, delete. Headline + at most one supporting line, not three. Number
 
 ---
 
+## #7 — Trust loops, settings consistency, and demo-realism pass
+
+**Decision (2026-05-06):** A single coherent pass to (a) finish removing internal-AI evaluation language from user-facing surfaces, (b) make every interactive button complete a visible loop, (c) reflect Settings toggles consistently across the app, and (d) make the second home credible enough that the home-switcher doesn't undermine prototype trust.
+
+### 7a. Final confidence/accuracy/guardrail purge
+
+Remaining hits found in audit:
+- `report.tsx` — "Night Wind-Down accuracy 94%" highlight title
+- `lib/data.ts` — Weekly metric `{ "Override rate", "4.1%", "Below 8% guardrail" }`
+- `feedback.tsx` — `learningCopy.correct.impact` "confidence will tick up to 96%"
+- `feedback.tsx` — `learningCopy.wrong.impact` "Confidence drops to 78%, falls below auto threshold"
+
+**Replacements:**
+- "Night Wind-Down accuracy 94%" → "Night Wind-Down ran 6 of 7 nights"
+- Override rate metric → `{ "Auto-actions kept", "82 of 84", "Only 2 corrections this week" }` — positive trust framing, no PM language
+- Feedback impact lines → user-meaningful consequences ("We'll lock this pattern in for next Sunday" / "We'll ask you first next Sunday at 7 AM")
+
+### 7b. Interaction loops complete with visible state
+
+Buttons that currently look tappable but don't visibly change state — fixed:
+- **Undo** (Auto hero card + Suggest "Just done") — collapses the row out, brief "Undone" pill, in Suggest mode the row returns to "Pending suggestions"
+- **Anomaly action** (Close garage / Turn off / Reconnect) — row animates into a green confirmation state showing past-tense ("Closed", "Off", "Reconnected"), then dismisses after ~1.4s
+- **Activate Presence AI** (onboarding CTA) — animates to ✓, switches to Home tab with a brief "Activated · Auto Mode" / "Activated · Suggest Mode" toast at top
+- **All N devices →** — opens a bottom-sheet device list grouped by **Lighting / Climate / Security / Speakers** (per-Q1 decision A — functional, not deferred)
+
+### 7c. Settings → app consistency
+
+`localOnly` and `learning` were trapped inside `OnboardingScreen`. Lifted to `app/page.tsx` so:
+- **Local-only mode ON** — Activity tab shows a locked state ("Disabled by Local-only mode · Your data never leaves your home"), free-text textarea on Feedback hides (suggestion chips stay so the loop still works on-device)
+- **48-hour learning-only ON** — Home hero card replaced with a "Learning your home · Hour 12 of 48" banner showing what *would* have fired (greyed-out preview list); no actions execute. Both Auto and Suggest defer to this banner.
+
+### 7d. Tahoe Cabin gets real (per Q2 decision A)
+
+Switching to Tahoe now changes:
+- **Active state** — "Last Person Left · 47 hr quiet" instead of Morning Wake; vacation-mode actions (cameras armed, thermostat 55°F freeze-protect, anti-burglary random evening lights)
+- **Anomalies** — "Doorbell offline 3 hr" + "Front lock battery 14%" (vacation-home-flavored)
+- **Quick controls** — Vacation thermostat, armed cameras, locked door, scheduled lights
+- **Weekly metrics + timeline** — lower auto-action counts; daily bars reflect a quiet vacation week
+
+This eliminates the "switch to Tahoe but still see Beverly Hills morning data" trust break.
+
+### 7e. Privacy/consent surface (per Q4 decision B)
+
+New "Who knows what" panel in Settings — for each household member shows what Presence AI uses about them (location, face, calendar). Plain-language, non-mandatory. Mom (role: Guest) explicitly shows reduced signals to demonstrate the permissioning model.
+
+### Decisions I deferred / explicitly out of scope
+
+- **Q5: Suggest → Auto graduation toast (Day 7 celebration)** — out of scope. The Day 3-of-7 indicator already communicates the graduation arc.
+- **Sheet account actions** ("Switch", "Manage Google Account", "Sign out") — left as visible-but-no-op. They're standard-pattern decoration; wiring them adds nothing demoable.
+- **Profile sheet "Switch account" + "Invite household member"** — same. Out of scope.
+
+---
+
 <!-- Add new amendments below -->

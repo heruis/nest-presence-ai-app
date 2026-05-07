@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ExternalLink, Code } from "lucide-react";
+import { Sparkles, ExternalLink, Code, Check } from "lucide-react";
 import { IPhoneFrame } from "@/components/iphone-frame";
 import { TabBar, type TabId } from "@/components/tab-bar";
 import { HomeScreen } from "@/components/screens/home";
@@ -12,7 +12,8 @@ import { ReportScreen } from "@/components/screens/report";
 import { OnboardingScreen, type Mode } from "@/components/screens/onboarding";
 import { HomeSwitcherSheet } from "@/components/home-switcher-sheet";
 import { ProfileSheet } from "@/components/profile-sheet";
-import { homes, householdMembers } from "@/lib/data";
+import { DevicesSheet } from "@/components/devices-sheet";
+import { homes, householdMembers, dataForHome, devicesForHome } from "@/lib/data";
 
 type ScreenId = TabId | "feedback";
 
@@ -30,16 +31,28 @@ export default function Page() {
   const [activeHomeId, setActiveHomeId] = useState(homes[0].id);
   const [homeSwitcherOpen, setHomeSwitcherOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [devicesOpen, setDevicesOpen] = useState(false);
+  const [learning, setLearning] = useState(true);
+  const [localOnly, setLocalOnly] = useState(false);
+  const [activatedToast, setActivatedToast] = useState<string | null>(null);
 
   const activeTab = tabFor[screen];
   const home = homes.find((h) => h.id === activeHomeId) ?? homes[0];
   const me = householdMembers[0];
+  const homeData = dataForHome(activeHomeId);
+  const devices = devicesForHome(activeHomeId);
 
   const headerProps = {
     home,
     me,
     onOpenHomeSwitcher: () => setHomeSwitcherOpen(true),
     onOpenProfile: () => setProfileOpen(true),
+  };
+
+  const triggerActivatedToast = (m: Mode) => {
+    setActivatedToast(m === "auto" ? "Activated · Auto Mode" : "Activated · Suggest Mode");
+    setScreen("home");
+    setTimeout(() => setActivatedToast(null), 2400);
   };
 
   return (
@@ -127,7 +140,7 @@ export default function Page() {
             <div className="relative h-full w-full">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={screen + activeHomeId + mode}
+                  key={screen + activeHomeId + mode + (learning ? "L" : "") + (localOnly ? "P" : "")}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
@@ -137,18 +150,48 @@ export default function Page() {
                   {screen === "home" && (
                     <HomeScreen
                       mode={mode}
+                      learning={learning}
+                      homeData={homeData}
                       onOpenPresence={() => setScreen("presence")}
                       onOpenFeedback={() => setScreen("feedback")}
+                      onOpenAllDevices={() => setDevicesOpen(true)}
                       {...headerProps}
                     />
                   )}
-                  {screen === "presence" && <PresenceAIScreen {...headerProps} />}
-                  {screen === "feedback" && <FeedbackScreen {...headerProps} />}
-                  {screen === "activity" && <ReportScreen {...headerProps} />}
+                  {screen === "presence" && <PresenceAIScreen homeData={homeData} {...headerProps} />}
+                  {screen === "feedback" && <FeedbackScreen localOnly={localOnly} {...headerProps} />}
+                  {screen === "activity" && (
+                    <ReportScreen localOnly={localOnly} homeData={homeData} {...headerProps} />
+                  )}
                   {screen === "settings" && (
-                    <OnboardingScreen mode={mode} setMode={setMode} {...headerProps} />
+                    <OnboardingScreen
+                      mode={mode}
+                      setMode={setMode}
+                      learning={learning}
+                      setLearning={setLearning}
+                      localOnly={localOnly}
+                      setLocalOnly={setLocalOnly}
+                      onActivate={triggerActivatedToast}
+                      {...headerProps}
+                    />
                   )}
                 </motion.div>
+              </AnimatePresence>
+
+              {/* Activation toast */}
+              <AnimatePresence>
+                {activatedToast && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3 }}
+                    className="pointer-events-none absolute left-1/2 top-14 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-[12px] font-semibold text-emerald-950 shadow-lg"
+                  >
+                    <Check size={14} strokeWidth={3} />
+                    {activatedToast}
+                  </motion.div>
+                )}
               </AnimatePresence>
 
               <TabBar
@@ -168,6 +211,12 @@ export default function Page() {
                 onClose={() => setProfileOpen(false)}
                 me={me}
                 members={householdMembers}
+              />
+              <DevicesSheet
+                open={devicesOpen}
+                onClose={() => setDevicesOpen(false)}
+                groups={devices}
+                homeName={home.shortName}
               />
             </div>
           </IPhoneFrame>
