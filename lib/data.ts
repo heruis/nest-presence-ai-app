@@ -15,10 +15,9 @@ import {
   MapPin,
   Eye,
   Clock,
-  Warehouse,
-  AlertTriangle,
   WifiOff,
   Battery,
+  Package,
 } from "lucide-react";
 
 export type StateId =
@@ -346,87 +345,47 @@ export const pendingSuggestions: PendingSuggestion[] = [
 ];
 
 // =============================================================================
-// Anomalies — "Needs your attention" (V1.1 scope expansion, see AMENDMENTS.md)
+// Devices — single source of truth for state (per AMENDMENTS #8)
 // =============================================================================
 
-export type Anomaly = {
+export type DeviceCapability = "brightness" | "temperature" | "lock" | "armed" | "playing";
+export type DeviceGroupLabel = "Lighting" | "Climate" | "Security" | "Speakers";
+
+export type Device = {
+  id: string;
+  name: string;
+  group: DeviceGroupLabel;
+  icon: LucideIcon;
+  capability: DeviceCapability;
+  product: string;
+};
+
+export type DeviceState = {
+  on: boolean;
+  value?: number; // brightness 0–100, temp in F
+  label: string; // "On · 35%" / "Off · privacy mode"
+  detail?: string; // "Re-arms 10:48 PM tonight" / "Auto-set by Morning Wake"
+};
+
+export type DeviceAction = {
+  id: string;
+  deviceId: string;
+  description: string;
+  before: DeviceState;
+  after: DeviceState;
+};
+
+export type HeadsUpItem = {
   id: string;
   title: string;
   detail: string;
   icon: LucideIcon;
   actionLabel: string;
+  actionPastTense: string;
   tone: "warn" | "info";
+  /** When the user taps the action, also mutate this device's state. */
+  mutatesDevice?: { deviceId: string; toState: DeviceState };
 };
-
-export const anomalies: Anomaly[] = [
-  {
-    id: "garage-open",
-    title: "Garage door has been open 22 min",
-    detail: "Usually closed by 7 AM on weekday mornings",
-    icon: Warehouse,
-    actionLabel: "Close garage",
-    tone: "warn",
-  },
-  {
-    id: "porch-on",
-    title: "Porch light still on",
-    detail: "Has been on since 6:14 PM — sunrise was at 6:02 AM",
-    icon: Lightbulb,
-    actionLabel: "Turn off",
-    tone: "info",
-  },
-];
-
-// =============================================================================
-// Quick controls — contextual subset of devices on the Home tab
-// =============================================================================
-
-export type QuickControl = {
-  id: string;
-  name: string;
-  state: string;
-  icon: LucideIcon;
-  primaryMetric?: string;
-  on: boolean;
-  why: string; // why this is in quick controls right now
-};
-
-export const quickControls: QuickControl[] = [
-  {
-    id: "thermo",
-    name: "Thermostat",
-    state: "Heating to 71°",
-    icon: Thermometer,
-    primaryMetric: "71°",
-    on: true,
-    why: "Actively heating",
-  },
-  {
-    id: "hub-kitchen",
-    name: "Kitchen Hub",
-    state: "Briefing playing",
-    icon: Volume2,
-    on: true,
-    why: "Just started",
-  },
-  {
-    id: "lights-bed",
-    name: "Bedroom Lights",
-    state: "Sunrise · 35%",
-    icon: Lightbulb,
-    primaryMetric: "35%",
-    on: true,
-    why: "Just raised",
-  },
-  {
-    id: "lock-front",
-    name: "Front Lock",
-    state: "Locked overnight",
-    icon: Lock,
-    on: true,
-    why: "Touched at wind-down",
-  },
-];
 
 // =============================================================================
 // Homes & household members (V1.1 scope — global header)
@@ -448,7 +407,7 @@ export const homes: HomeLocation[] = [
     name: "Beverly Hills House",
     shortName: "Beverly Hills",
     address: "Westwood, CA",
-    deviceCount: 12,
+    deviceCount: 7,
     isPrimary: true,
     state: "Morning Wake",
   },
@@ -457,7 +416,7 @@ export const homes: HomeLocation[] = [
     name: "Tahoe Cabin",
     shortName: "Tahoe",
     address: "South Lake Tahoe, CA",
-    deviceCount: 4,
+    deviceCount: 5,
     isPrimary: false,
     state: "Empty · Watching",
   },
@@ -570,13 +529,23 @@ export type WeeklyTimelineDay = { day: string; actions: number; big: string };
 
 export type HomeDataSet = {
   activeState: HomeState;
-  anomalies: Anomaly[];
-  quickControls: QuickControl[];
+  /** Phone status-bar time when this home is active (per AMENDMENTS #8d). */
+  activeStateTime: string;
+  devices: Device[];
+  initialDeviceState: Record<string, DeviceState>;
+  /** AI auto-actions with before/after so Undo can revert exactly. */
+  actions: DeviceAction[];
+  headsUp: HeadsUpItem[];
+  quickControlIds: string[];
   weeklyMetrics: WeeklyMetric[];
   timeline: WeeklyTimelineDay[];
   pendingSuggestions: PendingSuggestion[];
   weeklyHeadline: { count: number; subtitle: string };
 };
+
+// -----------------------------------------------------------------------------
+// Beverly Hills — Sunday May 5, 7:14 AM, Morning Wake
+// -----------------------------------------------------------------------------
 
 const beverlyHillsTimeline: WeeklyTimelineDay[] = [
   { day: "Mon", actions: 11, big: "Last Person Left fired 3×" },
@@ -588,17 +557,180 @@ const beverlyHillsTimeline: WeeklyTimelineDay[] = [
   { day: "Sun", actions: 13, big: "Morning Wake — today" },
 ];
 
+export const beverlyHillsDevices: Device[] = [
+  {
+    id: "bh-bedroom-lights",
+    name: "Bedroom lights",
+    group: "Lighting",
+    icon: Lightbulb,
+    capability: "brightness",
+    product: "Hue + Nest",
+  },
+  {
+    id: "bh-kitchen-lights",
+    name: "Kitchen lights",
+    group: "Lighting",
+    icon: Lightbulb,
+    capability: "brightness",
+    product: "Hue",
+  },
+  {
+    id: "bh-thermostat",
+    name: "Main thermostat",
+    group: "Climate",
+    icon: Thermometer,
+    capability: "temperature",
+    product: "Nest Learning",
+  },
+  {
+    id: "bh-front-lock",
+    name: "Front door lock",
+    group: "Security",
+    icon: Lock,
+    capability: "lock",
+    product: "Nest x Yale",
+  },
+  {
+    id: "bh-indoor-cam",
+    name: "Indoor cam",
+    group: "Security",
+    icon: Camera,
+    capability: "armed",
+    product: "Nest Cam (indoor)",
+  },
+  {
+    id: "bh-doorbell",
+    name: "Doorbell",
+    group: "Security",
+    icon: Eye,
+    capability: "armed",
+    product: "Nest Doorbell",
+  },
+  {
+    id: "bh-hub-max",
+    name: "Kitchen Hub Max",
+    group: "Speakers",
+    icon: Volume2,
+    capability: "playing",
+    product: "Nest Hub Max",
+  },
+];
+
+export const beverlyHillsInitialState: Record<string, DeviceState> = {
+  "bh-bedroom-lights": {
+    on: true,
+    value: 35,
+    label: "On · 35%",
+    detail: "Auto-set by Morning Wake",
+  },
+  "bh-kitchen-lights": { on: true, value: 60, label: "On · 60%" },
+  "bh-thermostat": {
+    on: true,
+    value: 71,
+    label: "Heating to 71°F",
+    detail: "Auto-set by Morning Wake",
+  },
+  "bh-front-lock": { on: true, label: "Locked overnight" },
+  "bh-indoor-cam": {
+    on: false,
+    label: "Off · privacy mode",
+    detail: "Re-arms 10:48 PM tonight",
+  },
+  "bh-doorbell": { on: true, label: "Watching", detail: "Package detected 6:32 AM" },
+  "bh-hub-max": { on: false, label: "Idle · briefing ready", detail: "Tap to start" },
+};
+
+export const beverlyHillsActions: DeviceAction[] = [
+  {
+    id: "bh-mw-lights",
+    deviceId: "bh-bedroom-lights",
+    description: "Raised bedroom lights to 35%",
+    before: { on: false, value: 0, label: "Off" },
+    after: {
+      on: true,
+      value: 35,
+      label: "On · 35%",
+      detail: "Auto-set by Morning Wake",
+    },
+  },
+  {
+    id: "bh-mw-thermo",
+    deviceId: "bh-thermostat",
+    description: "Thermostat → 71°F",
+    before: { on: true, value: 65, label: "Eco · 65°F" },
+    after: {
+      on: true,
+      value: 71,
+      label: "Heating to 71°F",
+      detail: "Auto-set by Morning Wake",
+    },
+  },
+  {
+    id: "bh-mw-cam",
+    deviceId: "bh-indoor-cam",
+    description: "Indoor cam off · privacy mode",
+    before: { on: true, label: "Watching · pets + sound" },
+    after: {
+      on: false,
+      label: "Off · privacy mode",
+      detail: "Re-arms 10:48 PM tonight",
+    },
+  },
+];
+
+export const beverlyHillsHeadsUp: HeadsUpItem[] = [
+  {
+    id: "bh-doorbell-package",
+    title: "Package delivered",
+    detail: "Doorbell · 6:32 AM · marked at front door",
+    icon: Package,
+    actionLabel: "View clip",
+    actionPastTense: "Viewed",
+    tone: "info",
+  },
+  {
+    id: "bh-briefing-ready",
+    title: "Briefing ready on Hub Max",
+    detail: "Weather, calendar, commute · 1 min",
+    icon: Volume2,
+    actionLabel: "Tap to start",
+    actionPastTense: "Playing",
+    tone: "info",
+    mutatesDevice: {
+      deviceId: "bh-hub-max",
+      toState: { on: true, label: "Playing briefing", detail: "1 min remaining" },
+    },
+  },
+];
+
+export const beverlyHillsQuickControlIds = [
+  "bh-thermostat",
+  "bh-indoor-cam",
+  "bh-bedroom-lights",
+  "bh-hub-max",
+];
+
 export const beverlyHillsData: HomeDataSet = {
   activeState: morningWake,
-  anomalies,
-  quickControls,
+  activeStateTime: "7:14 AM",
+  devices: beverlyHillsDevices,
+  initialDeviceState: beverlyHillsInitialState,
+  actions: beverlyHillsActions,
+  headsUp: beverlyHillsHeadsUp,
+  quickControlIds: beverlyHillsQuickControlIds,
   weeklyMetrics,
   timeline: beverlyHillsTimeline,
   pendingSuggestions,
-  weeklyHeadline: { count: 84, subtitle: "Apr 28 – May 5 · No voice commands. No manual routines." },
+  weeklyHeadline: {
+    count: 84,
+    subtitle: "Apr 28 – May 5 · No voice commands. No manual routines.",
+  },
 };
 
-// Tahoe: vacation home in Last-Person-Left for 47 hours
+// -----------------------------------------------------------------------------
+// Tahoe — vacation home, Last Person Left, 47 hours quiet
+// -----------------------------------------------------------------------------
+
 export const tahoeQuietState: HomeState = {
   id: "last-person-left",
   name: "Empty · Watching",
@@ -613,87 +745,128 @@ export const tahoeQuietState: HomeState = {
     { id: "time", label: "Long-vacant pattern", detail: "Typical for weekdays", icon: Clock },
   ],
   rationale: "All phones away for two days. Cameras armed, HVAC in vacation mode.",
-  actions: [
-    {
-      id: "tahoe-cams",
-      label: "Cameras armed (Vacation)",
-      device: "Nest Cam (2)",
-      icon: Camera,
-      detail: "Activity zones live",
-      status: "executed",
-    },
-    {
-      id: "tahoe-temp",
-      label: "Thermostat → 55°F vacation",
-      device: "Nest Learning",
-      icon: Thermometer,
-      detail: "Freeze-protect enabled",
-      status: "executed",
-    },
-    {
-      id: "tahoe-lights",
-      label: "Random evening lights, 7–10 PM",
-      device: "Hue",
-      icon: Lightbulb,
-      detail: "Anti-burglary pattern",
-      status: "executed",
-    },
-  ],
+  actions: [],
 };
 
-const tahoeAnomalies: Anomaly[] = [
+export const tahoeDevices: Device[] = [
   {
-    id: "tahoe-doorbell",
+    id: "th-thermostat",
+    name: "Cabin thermostat",
+    group: "Climate",
+    icon: Thermometer,
+    capability: "temperature",
+    product: "Nest Learning",
+  },
+  {
+    id: "th-front-lock",
+    name: "Front door lock",
+    group: "Security",
+    icon: Lock,
+    capability: "lock",
+    product: "Nest x Yale",
+  },
+  {
+    id: "th-indoor-cam",
+    name: "Living room cam",
+    group: "Security",
+    icon: Camera,
+    capability: "armed",
+    product: "Nest Cam (indoor)",
+  },
+  {
+    id: "th-doorbell",
+    name: "Doorbell",
+    group: "Security",
+    icon: WifiOff,
+    capability: "armed",
+    product: "Nest Doorbell",
+  },
+  {
+    id: "th-living-lights",
+    name: "Living lights",
+    group: "Lighting",
+    icon: Lightbulb,
+    capability: "brightness",
+    product: "Hue",
+  },
+];
+
+export const tahoeInitialState: Record<string, DeviceState> = {
+  "th-thermostat": {
+    on: false,
+    value: 55,
+    label: "Vacation · 55°F",
+    detail: "Freeze-protect",
+  },
+  "th-front-lock": { on: true, label: "Locked 47 hr" },
+  "th-indoor-cam": { on: true, label: "Armed · Vacation" },
+  "th-doorbell": { on: false, label: "Offline 3 hr", detail: "Likely Wi-Fi blip" },
+  "th-living-lights": {
+    on: false,
+    value: 0,
+    label: "Scheduled · 7–10 PM tonight",
+  },
+};
+
+export const tahoeActions: DeviceAction[] = [
+  {
+    id: "th-cams",
+    deviceId: "th-indoor-cam",
+    description: "Cameras armed (Vacation)",
+    before: { on: false, label: "Off · privacy mode" },
+    after: { on: true, label: "Armed · Vacation" },
+  },
+  {
+    id: "th-thermo",
+    deviceId: "th-thermostat",
+    description: "Thermostat → 55°F vacation",
+    before: { on: true, value: 68, label: "68°F" },
+    after: {
+      on: false,
+      value: 55,
+      label: "Vacation · 55°F",
+      detail: "Freeze-protect",
+    },
+  },
+  {
+    id: "th-lights",
+    deviceId: "th-living-lights",
+    description: "Random evening lights, 7–10 PM",
+    before: { on: false, value: 0, label: "Off" },
+    after: { on: false, value: 0, label: "Scheduled · 7–10 PM tonight" },
+  },
+];
+
+export const tahoeHeadsUp: HeadsUpItem[] = [
+  {
+    id: "th-doorbell-offline",
     title: "Doorbell offline 3 hr",
     detail: "Last seen 4:14 AM — likely Wi-Fi blip",
     icon: WifiOff,
     actionLabel: "Reconnect",
+    actionPastTense: "Reconnected",
     tone: "warn",
+    mutatesDevice: {
+      deviceId: "th-doorbell",
+      toState: { on: true, label: "Watching" },
+    },
   },
   {
-    id: "tahoe-bat",
+    id: "th-bat",
     title: "Front lock battery at 14%",
-    detail: "Replace on next visit",
+    detail: "Replace on next visit — usually 4 weeks left",
     icon: Battery,
     actionLabel: "Remind me",
+    actionPastTense: "Reminder set",
     tone: "info",
   },
 ];
 
-const tahoeQuickControls: QuickControl[] = [
-  {
-    id: "tahoe-temp",
-    name: "Thermostat",
-    state: "Vacation · 55°",
-    icon: Thermometer,
-    primaryMetric: "55°",
-    on: false,
-    why: "Long-away mode",
-  },
-  {
-    id: "tahoe-cams",
-    name: "Cameras",
-    state: "Armed · Vacation",
-    icon: Camera,
-    on: true,
-    why: "Empty home",
-  },
-  {
-    id: "tahoe-lock",
-    name: "Front Lock",
-    state: "Locked 47 hr",
-    icon: Lock,
-    on: true,
-    why: "Auto-locked",
-  },
-  {
-    id: "tahoe-lights",
-    name: "Living Lights",
-    state: "Random · 7–10 PM",
-    icon: Lightbulb,
-    on: false,
-    why: "Anti-burglary",
-  },
+export const tahoeQuickControlIds = [
+  "th-thermostat",
+  "th-indoor-cam",
+  "th-front-lock",
+  "th-living-lights",
 ];
 
 const tahoeWeeklyMetrics: WeeklyMetric[] = [
@@ -726,8 +899,12 @@ const tahoePendingSuggestions: PendingSuggestion[] = [
 
 export const tahoeData: HomeDataSet = {
   activeState: tahoeQuietState,
-  anomalies: tahoeAnomalies,
-  quickControls: tahoeQuickControls,
+  activeStateTime: "7:14 AM",
+  devices: tahoeDevices,
+  initialDeviceState: tahoeInitialState,
+  actions: tahoeActions,
+  headsUp: tahoeHeadsUp,
+  quickControlIds: tahoeQuickControlIds,
   weeklyMetrics: tahoeWeeklyMetrics,
   timeline: tahoeTimeline,
   pendingSuggestions: tahoePendingSuggestions,
@@ -737,102 +914,6 @@ export const tahoeData: HomeDataSet = {
 export function dataForHome(homeId: string): HomeDataSet {
   if (homeId === "tahoe-cabin") return tahoeData;
   return beverlyHillsData;
-}
-
-// =============================================================================
-// All-devices list (Q1 decision A — functional sheet, grouped by function)
-// =============================================================================
-
-export type DeviceItem = {
-  id: string;
-  name: string;
-  state: string;
-  icon: LucideIcon;
-  on: boolean;
-};
-
-export type DeviceGroup = {
-  label: "Lighting" | "Climate" | "Security" | "Speakers";
-  icon: LucideIcon;
-  devices: DeviceItem[];
-};
-
-export const beverlyHillsDevices: DeviceGroup[] = [
-  {
-    label: "Lighting",
-    icon: Lightbulb,
-    devices: [
-      { id: "bh-l1", name: "Bedroom lights", state: "On · 35%", icon: Lightbulb, on: true },
-      { id: "bh-l2", name: "Kitchen lights", state: "On · 60%", icon: Lightbulb, on: true },
-      { id: "bh-l3", name: "Living room lights", state: "Off", icon: Lightbulb, on: false },
-      { id: "bh-l4", name: "Porch light", state: "Off", icon: Lightbulb, on: false },
-    ],
-  },
-  {
-    label: "Climate",
-    icon: Thermometer,
-    devices: [
-      { id: "bh-c1", name: "Main thermostat", state: "Heating · 71°F", icon: Thermometer, on: true },
-    ],
-  },
-  {
-    label: "Security",
-    icon: Lock,
-    devices: [
-      { id: "bh-s1", name: "Front door lock", state: "Unlocked", icon: Lock, on: false },
-      { id: "bh-s2", name: "Back door lock", state: "Locked", icon: Lock, on: true },
-      { id: "bh-s3", name: "Front Nest Cam", state: "Paused (home)", icon: Camera, on: false },
-      { id: "bh-s4", name: "Backyard Nest Cam", state: "Paused (home)", icon: Camera, on: false },
-      { id: "bh-s5", name: "Kitchen Hub Max cam", state: "Paused (home)", icon: Camera, on: false },
-      { id: "bh-s6", name: "Doorbell", state: "Online", icon: Eye, on: true },
-    ],
-  },
-  {
-    label: "Speakers",
-    icon: Volume2,
-    devices: [
-      { id: "bh-h1", name: "Kitchen Hub Max", state: "Briefing playing", icon: Volume2, on: true },
-      { id: "bh-h2", name: "Bedroom speaker", state: "Idle", icon: Volume2, on: false },
-    ],
-  },
-];
-
-export const tahoeDevices: DeviceGroup[] = [
-  {
-    label: "Lighting",
-    icon: Lightbulb,
-    devices: [
-      { id: "th-l1", name: "Living lights", state: "Scheduled · 7–10 PM", icon: Lightbulb, on: false },
-      { id: "th-l2", name: "Porch light", state: "Off", icon: Lightbulb, on: false },
-    ],
-  },
-  {
-    label: "Climate",
-    icon: Thermometer,
-    devices: [
-      { id: "th-c1", name: "Cabin thermostat", state: "Vacation · 55°F", icon: Thermometer, on: false },
-    ],
-  },
-  {
-    label: "Security",
-    icon: Lock,
-    devices: [
-      { id: "th-s1", name: "Front door lock", state: "Locked 47 hr", icon: Lock, on: true },
-      { id: "th-s2", name: "Driveway Nest Cam", state: "Armed · Vacation", icon: Camera, on: true },
-      { id: "th-s3", name: "Living room Nest Cam", state: "Armed · Vacation", icon: Camera, on: true },
-      { id: "th-s4", name: "Doorbell", state: "Offline 3 hr", icon: WifiOff, on: false },
-    ],
-  },
-  {
-    label: "Speakers",
-    icon: Volume2,
-    devices: [],
-  },
-];
-
-export function devicesForHome(homeId: string): DeviceGroup[] {
-  if (homeId === "tahoe-cabin") return tahoeDevices;
-  return beverlyHillsDevices;
 }
 
 // =============================================================================

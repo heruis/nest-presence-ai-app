@@ -10,16 +10,23 @@ import { PresenceAIScreen } from "@/components/screens/presence-ai";
 import { FeedbackScreen } from "@/components/screens/feedback";
 import { ReportScreen } from "@/components/screens/report";
 import { OnboardingScreen, type Mode } from "@/components/screens/onboarding";
+import { DevicesScreen } from "@/components/screens/devices";
 import { HomeSwitcherSheet } from "@/components/home-switcher-sheet";
 import { ProfileSheet } from "@/components/profile-sheet";
-import { DevicesSheet } from "@/components/devices-sheet";
-import { homes, householdMembers, dataForHome, devicesForHome } from "@/lib/data";
+import {
+  homes,
+  householdMembers,
+  dataForHome,
+  type DeviceAction,
+  type DeviceState,
+} from "@/lib/data";
 
-type ScreenId = TabId | "feedback";
+type ScreenId = TabId | "feedback" | "devices";
 
 const tabFor: Record<ScreenId, TabId> = {
   home: "home",
   feedback: "home",
+  devices: "home",
   presence: "presence",
   activity: "activity",
   settings: "settings",
@@ -31,16 +38,26 @@ export default function Page() {
   const [activeHomeId, setActiveHomeId] = useState(homes[0].id);
   const [homeSwitcherOpen, setHomeSwitcherOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [devicesOpen, setDevicesOpen] = useState(false);
   const [learning, setLearning] = useState(true);
   const [localOnly, setLocalOnly] = useState(false);
   const [activatedToast, setActivatedToast] = useState<string | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+
+  // Per-home device state — single source of truth for AI + manual mutations
+  const [deviceStateByHome, setDeviceStateByHome] = useState<
+    Record<string, Record<string, DeviceState>>
+  >(() =>
+    homes.reduce<Record<string, Record<string, DeviceState>>>((acc, h) => {
+      acc[h.id] = dataForHome(h.id).initialDeviceState;
+      return acc;
+    }, {})
+  );
 
   const activeTab = tabFor[screen];
   const home = homes.find((h) => h.id === activeHomeId) ?? homes[0];
   const me = householdMembers[0];
   const homeData = dataForHome(activeHomeId);
-  const devices = devicesForHome(activeHomeId);
+  const deviceState = deviceStateByHome[activeHomeId];
 
   const headerProps = {
     home,
@@ -53,6 +70,36 @@ export default function Page() {
     setActivatedToast(m === "auto" ? "Activated · Auto Mode" : "Activated · Suggest Mode");
     setScreen("home");
     setTimeout(() => setActivatedToast(null), 2400);
+  };
+
+  const mutateDevice = (deviceId: string, next: DeviceState) => {
+    setDeviceStateByHome((prev) => ({
+      ...prev,
+      [activeHomeId]: { ...prev[activeHomeId], [deviceId]: next },
+    }));
+  };
+
+  const undoAction = (action: DeviceAction) => {
+    mutateDevice(action.deviceId, action.before);
+  };
+
+  const openDevicesList = () => {
+    setSelectedDeviceId(null);
+    setScreen("devices");
+  };
+  const openDeviceDetail = (deviceId: string) => {
+    setSelectedDeviceId(deviceId);
+    setScreen("devices");
+  };
+  const goBackFromDevices = () => {
+    setSelectedDeviceId(null);
+    setScreen("home");
+  };
+
+  // Set as default — for the prototype, the visual confirmation is the contract.
+  // The current device state stays put; toast tells the user the AI now treats it as the default.
+  const setAsDefault = (_deviceId: string) => {
+    // Intentionally a no-op on lib/data.ts — the toast inside DevicesScreen carries the affordance.
   };
 
   return (
@@ -91,7 +138,7 @@ export default function Page() {
           <div className="mt-6 grid grid-cols-2 gap-2 max-w-sm">
             <FeatureChip label="Morning Wake hero" hot />
             <FeatureChip label="Suggest vs Auto modes" hot />
-            <FeatureChip label="Anomaly surfacing" />
+            <FeatureChip label="Connected device truth" hot />
             <FeatureChip label='"Did we get this right?"' />
             <FeatureChip label="Multi-home + profile" />
             <FeatureChip label="Weekly Intelligence Report" />
@@ -152,9 +199,13 @@ export default function Page() {
                       mode={mode}
                       learning={learning}
                       homeData={homeData}
+                      deviceState={deviceState}
                       onOpenPresence={() => setScreen("presence")}
                       onOpenFeedback={() => setScreen("feedback")}
-                      onOpenAllDevices={() => setDevicesOpen(true)}
+                      onOpenDevices={openDevicesList}
+                      onSelectDevice={openDeviceDetail}
+                      onMutateDevice={mutateDevice}
+                      onUndoAction={undoAction}
                       {...headerProps}
                     />
                   )}
@@ -173,6 +224,20 @@ export default function Page() {
                       setLocalOnly={setLocalOnly}
                       onActivate={triggerActivatedToast}
                       {...headerProps}
+                    />
+                  )}
+                  {screen === "devices" && (
+                    <DevicesScreen
+                      devices={homeData.devices}
+                      deviceState={deviceState}
+                      activeStateName={homeData.activeState.name}
+                      homeName={home.shortName}
+                      time={homeData.activeStateTime.split(" ")[0]}
+                      selectedDeviceId={selectedDeviceId}
+                      onSelectDevice={(id) => setSelectedDeviceId(id)}
+                      onMutateDevice={mutateDevice}
+                      onSetAsDefault={setAsDefault}
+                      onBack={goBackFromDevices}
                     />
                   )}
                 </motion.div>
@@ -211,12 +276,6 @@ export default function Page() {
                 onClose={() => setProfileOpen(false)}
                 me={me}
                 members={householdMembers}
-              />
-              <DevicesSheet
-                open={devicesOpen}
-                onClose={() => setDevicesOpen(false)}
-                groups={devices}
-                homeName={home.shortName}
               />
             </div>
           </IPhoneFrame>

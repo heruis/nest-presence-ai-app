@@ -9,6 +9,7 @@ import {
   Check,
   X as XIcon,
   Cpu,
+  LayoutGrid,
 } from "lucide-react";
 import { StatusBar } from "@/components/status-bar";
 import { GlobalHeader } from "@/components/global-header";
@@ -17,6 +18,8 @@ import {
   type HouseholdMember,
   type PendingSuggestion,
   type HomeDataSet,
+  type DeviceState,
+  type DeviceAction,
 } from "@/lib/data";
 import { cn } from "@/lib/cn";
 
@@ -24,60 +27,61 @@ type Mode = "auto" | "suggest";
 
 const skipReasons = ["Wrong time", "Wrong action", "Just not now"];
 
-const pastTense: Record<string, string> = {
-  "Close garage": "Closed",
-  "Turn off": "Off",
-  "Reconnect": "Reconnected",
-  "Remind me": "Reminder set",
-};
-
 export function HomeScreen({
   mode,
   learning,
   homeData,
+  deviceState,
   home,
   me,
   onOpenPresence,
   onOpenFeedback,
-  onOpenAllDevices,
+  onOpenDevices,
+  onSelectDevice,
+  onMutateDevice,
+  onUndoAction,
   onOpenHomeSwitcher,
   onOpenProfile,
 }: {
   mode: Mode;
   learning: boolean;
   homeData: HomeDataSet;
+  deviceState: Record<string, DeviceState>;
   home: HomeLocation;
   me: HouseholdMember;
   onOpenPresence: () => void;
   onOpenFeedback: () => void;
-  onOpenAllDevices: () => void;
+  onOpenDevices: () => void;
+  onSelectDevice: (deviceId: string) => void;
+  onMutateDevice: (deviceId: string, next: DeviceState) => void;
+  onUndoAction: (action: DeviceAction) => void;
   onOpenHomeSwitcher: () => void;
   onOpenProfile: () => void;
 }) {
   const state = homeData.activeState;
+  const statusBarTime = homeData.activeStateTime.split(" ")[0];
 
   // Suggest-mode pending vs confirmed
-  const [pending, setPending] = useState<PendingSuggestion[]>(
-    homeData.pendingSuggestions
-  );
+  const [pending, setPending] = useState<PendingSuggestion[]>(homeData.pendingSuggestions);
   const [confirmed, setConfirmed] = useState<PendingSuggestion[]>([]);
   const [skippedFor, setSkippedFor] = useState<string | null>(null);
 
-  // Undo loops
-  const [undoneAuto, setUndoneAuto] = useState<Set<string>>(new Set());
+  // Track which AI actions have been Undo'd (for the hero card list)
+  const [undoneActions, setUndoneActions] = useState<Set<string>>(new Set());
   const [undoPill, setUndoPill] = useState(false);
 
-  // Anomaly action lifecycle: id -> "acted" once tapped; row removed shortly after
-  const [anomalyActed, setAnomalyActed] = useState<Set<string>>(new Set());
-  const [anomalyDismissed, setAnomalyDismissed] = useState<Set<string>>(new Set());
+  // Heads up lifecycle: id -> "acted" once tapped; row removed shortly after
+  const [headsUpActed, setHeadsUpActed] = useState<Set<string>>(new Set());
+  const [headsUpDismissed, setHeadsUpDismissed] = useState<Set<string>>(new Set());
 
   const showUndoPill = () => {
     setUndoPill(true);
     window.setTimeout(() => setUndoPill(false), 1400);
   };
 
-  const undoAuto = (id: string) => {
-    setUndoneAuto((s) => new Set(s).add(id));
+  const undo = (action: DeviceAction) => {
+    setUndoneActions((s) => new Set(s).add(action.id));
+    onUndoAction(action);
     showUndoPill();
   };
 
@@ -91,22 +95,27 @@ export function HomeScreen({
     setPending((p) => p.filter((x) => x.id !== s.id));
     setConfirmed((c) => [s, ...c]);
   };
+
   const skipWithReason = (id: string, _reason: string) => {
     setPending((p) => p.filter((x) => x.id !== id));
     setSkippedFor(null);
   };
 
-  const actOnAnomaly = (id: string) => {
-    setAnomalyActed((s) => new Set(s).add(id));
+  const tapHeadsUp = (item: (typeof homeData.headsUp)[number]) => {
+    setHeadsUpActed((s) => new Set(s).add(item.id));
+    if (item.mutatesDevice) {
+      onMutateDevice(item.mutatesDevice.deviceId, item.mutatesDevice.toState);
+    }
     window.setTimeout(() => {
-      setAnomalyDismissed((s) => new Set(s).add(id));
+      setHeadsUpDismissed((s) => new Set(s).add(item.id));
     }, 1400);
   };
 
-  const visibleActions = state.actions.filter((a) => !undoneAuto.has(a.id));
-  const visibleAnomalies = homeData.anomalies.filter(
-    (a) => !anomalyDismissed.has(a.id)
-  );
+  const visibleActions = homeData.actions.filter((a) => !undoneActions.has(a.id));
+  const visibleHeadsUp = homeData.headsUp.filter((a) => !headsUpDismissed.has(a.id));
+  const quickControlDevices = homeData.quickControlIds
+    .map((id) => homeData.devices.find((d) => d.id === id))
+    .filter((d): d is NonNullable<typeof d> => Boolean(d));
 
   return (
     <div className="relative h-full w-full">
@@ -127,7 +136,7 @@ export function HomeScreen({
       />
 
       <div className="relative z-10 h-full w-full overflow-y-auto no-scrollbar pb-32">
-        <StatusBar tone="light" />
+        <StatusBar tone="light" time={statusBarTime} />
         <GlobalHeader
           home={home}
           me={me}
@@ -136,21 +145,30 @@ export function HomeScreen({
           onOpenProfile={onOpenProfile}
         />
 
-        {/* greeting */}
+        {/* greeting + Devices icon */}
         <motion.div
           initial={{ y: 8, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="px-6 pt-7 text-white"
+          className="flex items-start justify-between gap-3 px-6 pt-7 text-white"
         >
-          <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-white/70">
-            Sunday · May 5
-          </p>
-          <h1 className="mt-1 text-[34px] font-semibold leading-tight tracking-tight">
-            Good morning,
-            <br />
-            {me.name}
-          </h1>
+          <div className="min-w-0">
+            <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-white/70">
+              Sunday · May 5
+            </p>
+            <h1 className="mt-1 text-[34px] font-semibold leading-tight tracking-tight">
+              Good morning,
+              <br />
+              {me.name}
+            </h1>
+          </div>
+          <button
+            onClick={onOpenDevices}
+            aria-label="Devices"
+            className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/12 text-white ring-1 ring-white/20 backdrop-blur-md"
+          >
+            <LayoutGrid size={19} strokeWidth={2.2} />
+          </button>
         </motion.div>
 
         {/* state badge */}
@@ -205,11 +223,13 @@ export function HomeScreen({
             </div>
             <div className="mx-5 h-px bg-white/8" />
             <ul className="px-2 py-2">
-              {state.actions.map((a, i) => {
-                const Icon = a.icon;
+              {homeData.actions.map((action, i) => {
+                const device = homeData.devices.find((d) => d.id === action.deviceId);
+                if (!device) return null;
+                const Icon = device.icon;
                 return (
                   <motion.li
-                    key={a.id}
+                    key={action.id}
                     initial={{ x: -10, opacity: 0 }}
                     animate={{ x: 0, opacity: 0.55 }}
                     transition={{ delay: 0.9 + i * 0.12, duration: 0.5 }}
@@ -220,9 +240,9 @@ export function HomeScreen({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-medium text-white/65 line-through decoration-white/20">
-                        {a.label}
+                        {action.description}
                       </p>
-                      <p className="text-[12px] text-white/40">{a.device}</p>
+                      <p className="text-[12px] text-white/40">{device.product}</p>
                     </div>
                   </motion.li>
                 );
@@ -242,8 +262,8 @@ export function HomeScreen({
                 <Sparkles size={14} strokeWidth={2.5} />
                 <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
                   {mode === "auto"
-                    ? `Auto-actioned at ${state.inferredAt}`
-                    : `Detected at ${state.inferredAt}`}
+                    ? `Auto-actioned at ${homeData.activeStateTime}`
+                    : `Detected at ${homeData.activeStateTime}`}
                 </span>
               </div>
               <p className="mt-2 text-[15px] leading-snug text-white/90">
@@ -257,11 +277,13 @@ export function HomeScreen({
                 <div className="mx-5 h-px bg-white/8" />
                 <ul className="px-2 py-2">
                   <AnimatePresence initial={false}>
-                    {visibleActions.map((a, i) => {
-                      const Icon = a.icon;
+                    {visibleActions.map((action, i) => {
+                      const device = homeData.devices.find((d) => d.id === action.deviceId);
+                      if (!device) return null;
+                      const Icon = device.icon;
                       return (
                         <motion.li
-                          key={a.id}
+                          key={action.id}
                           layout
                           initial={{ x: -10, opacity: 0 }}
                           animate={{ x: 0, opacity: 1 }}
@@ -274,12 +296,12 @@ export function HomeScreen({
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[14px] font-medium text-white">
-                              {a.label}
+                              {action.description}
                             </p>
-                            <p className="text-[12px] text-white/55">{a.device}</p>
+                            <p className="text-[12px] text-white/55">{device.product}</p>
                           </div>
                           <button
-                            onClick={() => undoAuto(a.id)}
+                            onClick={() => undo(action)}
                             className="flex shrink-0 items-center gap-1 rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-medium text-white/70 ring-1 ring-white/10"
                           >
                             <RotateCcw size={11} strokeWidth={2.4} />
@@ -411,7 +433,7 @@ export function HomeScreen({
           </Section>
         )}
 
-        {/* JUST DONE — Suggest Mode only (auto mode shows actions in hero card) */}
+        {/* JUST DONE — Suggest Mode only */}
         {mode === "suggest" && !learning && confirmed.length > 0 && (
           <Section title="Just done" count={confirmed.length} delay={1.1}>
             <ul className="space-y-1.5 px-4">
@@ -445,25 +467,21 @@ export function HomeScreen({
           </Section>
         )}
 
-        {/* NEEDS YOUR ATTENTION */}
-        {visibleAnomalies.length > 0 && (
-          <Section
-            title="Needs your attention"
-            count={visibleAnomalies.length}
-            delay={1.4}
-          >
+        {/* HEADS UP */}
+        {visibleHeadsUp.length > 0 && (
+          <Section title="Heads up" count={visibleHeadsUp.length} delay={1.4}>
             <div className="space-y-2 px-4">
               <AnimatePresence initial={false}>
-                {visibleAnomalies.map((a, i) => {
-                  const Icon = a.icon;
-                  const acted = anomalyActed.has(a.id);
+                {visibleHeadsUp.map((item, i) => {
+                  const Icon = item.icon;
+                  const acted = headsUpActed.has(item.id);
                   const tint =
-                    a.tone === "warn"
+                    item.tone === "warn"
                       ? "bg-rose-500/12 text-rose-300 ring-rose-400/25"
                       : "bg-amber-400/12 text-amber-300 ring-amber-400/25";
                   return (
                     <motion.div
-                      key={a.id}
+                      key={item.id}
                       layout
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -492,20 +510,20 @@ export function HomeScreen({
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-[13px] font-semibold text-white">
-                          {a.title}
+                          {item.title}
                         </p>
-                        <p className="text-[11px] text-white/55">{a.detail}</p>
+                        <p className="text-[11px] text-white/55">{item.detail}</p>
                       </div>
                       {acted ? (
                         <span className="shrink-0 self-center rounded-full bg-emerald-500/20 px-3 py-1.5 text-[12px] font-semibold text-emerald-300 ring-1 ring-emerald-400/30">
-                          {pastTense[a.actionLabel] ?? "Done"}
+                          {item.actionPastTense}
                         </span>
                       ) : (
                         <button
-                          onClick={() => actOnAnomaly(a.id)}
+                          onClick={() => tapHeadsUp(item)}
                           className="shrink-0 self-center rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold text-black"
                         >
-                          {a.actionLabel}
+                          {item.actionLabel}
                         </button>
                       )}
                     </motion.div>
@@ -516,74 +534,87 @@ export function HomeScreen({
           </Section>
         )}
 
-        {/* QUICK CONTROLS */}
-        <Section title="Quick controls" delay={1.6}>
-          <div className="grid grid-cols-2 gap-3 px-4">
-            {homeData.quickControls.map((c, i) => {
-              const Icon = c.icon;
-              return (
-                <motion.div
-                  key={c.id}
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 1.7 + i * 0.05, duration: 0.4 }}
-                  className={cn(
-                    "rounded-2xl p-3.5 ring-1 transition",
-                    c.on
-                      ? "bg-white text-black ring-white/10"
-                      : "bg-[#16191c] text-white ring-white/5"
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <div
+        {/* QUICK CONTROLS — live state, tap → device detail */}
+        {quickControlDevices.length > 0 && (
+          <Section title="Quick controls" delay={1.6}>
+            <div className="grid grid-cols-2 gap-3 px-4">
+              {quickControlDevices.map((device, i) => {
+                const Icon = device.icon;
+                const s = deviceState[device.id];
+                if (!s) return null;
+                const metric =
+                  device.capability === "brightness" && s.value !== undefined
+                    ? `${s.value}%`
+                    : device.capability === "temperature" && s.value !== undefined
+                      ? `${s.value}°`
+                      : null;
+                return (
+                  <motion.button
+                    key={device.id}
+                    onClick={() => onSelectDevice(device.id)}
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 1.7 + i * 0.05, duration: 0.4 }}
+                    className={cn(
+                      "rounded-2xl p-3.5 text-left ring-1 transition",
+                      s.on
+                        ? "bg-white text-black ring-white/10"
+                        : "bg-[#16191c] text-white ring-white/5"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-full",
+                          s.on ? "bg-black/8 text-black" : "bg-white/5 text-white/70"
+                        )}
+                      >
+                        <Icon size={18} strokeWidth={2.2} />
+                      </div>
+                      {metric ? (
+                        <span className="text-[16px] font-semibold tabular-nums">
+                          {metric}
+                        </span>
+                      ) : (
+                        <span
+                          className={cn(
+                            "h-2 w-2 rounded-full",
+                            s.on ? "bg-emerald-500" : "bg-white/20"
+                          )}
+                        />
+                      )}
+                    </div>
+                    <p className="mt-3 text-[14px] font-semibold tracking-tight">
+                      {device.name}
+                    </p>
+                    <p
                       className={cn(
-                        "flex h-9 w-9 items-center justify-center rounded-full",
-                        c.on ? "bg-black/8 text-black" : "bg-white/5 text-white/70"
+                        "text-[12px]",
+                        s.on ? "text-black/55" : "text-white/45"
                       )}
                     >
-                      <Icon size={18} strokeWidth={2.2} />
-                    </div>
-                    {c.primaryMetric ? (
-                      <span className="text-[16px] font-semibold tabular-nums">
-                        {c.primaryMetric}
-                      </span>
-                    ) : (
-                      <span
+                      {s.label}
+                    </p>
+                    {s.detail && (
+                      <p
                         className={cn(
-                          "h-2 w-2 rounded-full",
-                          c.on ? "bg-emerald-500" : "bg-white/20"
+                          "mt-2 text-[10px] font-medium uppercase tracking-wider",
+                          s.on ? "text-black/40" : "text-white/35"
                         )}
-                      />
+                      >
+                        {s.detail}
+                      </p>
                     )}
-                  </div>
-                  <p className="mt-3 text-[14px] font-semibold tracking-tight">
-                    {c.name}
-                  </p>
-                  <p
-                    className={cn(
-                      "text-[12px]",
-                      c.on ? "text-black/55" : "text-white/45"
-                    )}
-                  >
-                    {c.state}
-                  </p>
-                  <p
-                    className={cn(
-                      "mt-2 text-[10px] font-medium uppercase tracking-wider",
-                      c.on ? "text-black/40" : "text-white/35"
-                    )}
-                  >
-                    {c.why}
-                  </p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </Section>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </Section>
+        )}
 
         {/* All devices link */}
         <button
-          onClick={onOpenAllDevices}
+          onClick={onOpenDevices}
           className="mx-4 mt-4 flex w-[calc(100%-2rem)] items-center justify-between rounded-2xl bg-[#16191c] px-4 py-3 ring-1 ring-white/5"
         >
           <span className="text-[13px] font-medium text-white/85">

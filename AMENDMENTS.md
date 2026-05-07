@@ -181,4 +181,72 @@ New "Who knows what" panel in Settings — for each household member shows what 
 
 ---
 
+## #8 — Connected device truth + scenario coherence pass
+
+**Decision (2026-05-07):** Close the gap between AI narrative and device truth. The AI says "raised bedroom lights to 35%" but the device list still shows static mock data — Undo doesn't visibly walk anything back, manual control doesn't exist, Quick Controls are decorative. Make device state the single source of truth that the AI mutates, the user mutates, and Undo reverts. Add a full-screen Devices page with per-device detail view + "Set as default for current mode" CTA. Use the same pass to rebuild the 7:14 AM Sunday scene so it actually hangs together — including replacing the auto-played Hub Max briefing with an "indoor cam off · privacy mode" action that earns its slot.
+
+### 8a. Device state lift — single source of truth
+
+- Per-home `Record<deviceId, DeviceState>` lifted to `app/page.tsx`
+- AI auto-actions are `DeviceAction` records carrying `before` + `after` so Undo can revert exactly
+- Manual adjustment (Quick Controls + Devices page) writes directly to the same store
+- Hero card auto-action list, Quick Controls, and Devices page all render from one source
+
+### 8b. Full-screen Devices page (replaces DevicesSheet)
+
+- **New Devices icon** on Home tab, top-right, level with the "Good morning" headline (sits below the profile circle in the global header). Glyph: `LayoutGrid` from lucide-react (2x2 grouped rectangles, Google-Home–style).
+- **"All N devices →"** link at the bottom of Home routes to the same page.
+- Page lists devices grouped by Lighting / Climate / Security / Speakers, live state.
+- Tap a device → detail view with the right control widget per capability (brightness slider, temp slider, lock toggle, cam armed toggle, briefing tap-to-play).
+- Detail view CTA: **"Set as default for [active state]"** — saves the user's current adjustment as the new auto-action target for the active state. Confirmation toast.
+
+### 8c. 7-device cut for Beverly Hills (was 13)
+
+| Device | Group | Capability |
+|---|---|---|
+| Bedroom lights | Lighting | brightness 0–100 |
+| Kitchen lights | Lighting | brightness 0–100 |
+| Main thermostat | Climate | temp |
+| Front door lock | Security | lock toggle |
+| Indoor Nest Cam | Security | armed toggle — "Off · privacy mode" by day, "Watching" at night |
+| Nest Doorbell | Security | armed toggle (also doubles as outdoor cam, matches actual Nest line) |
+| Kitchen Hub Max | Speakers | playing toggle ("Idle · briefing ready · tap to start") |
+
+Tahoe trims to **5 devices**: cabin thermostat, front lock, indoor cam (vacation = always armed), Nest Doorbell (offline 3 hr), living room lights (scheduled 7–10 PM).
+
+### 8d. Scenario coherence — Sunday May 5, 7:14 AM
+
+- **Status bar reads 7:14 AM** on Home tab (was iOS-default 9:41).
+- **Three Morning Wake auto-actions** (was four):
+  - Raised bedroom lights to 35%
+  - Thermostat → 71°F
+  - **Indoor cam off · privacy mode** (replaces "Started morning briefing on Hub Max")
+- The privacy-mode action faithfully realizes the existing Presence AI screen promise ("Cameras only run when you're away"). Asymmetric on purpose: the AI subtracts surveillance when you're up, not just adds comfort.
+
+### 8e. "Heads up" replaces "Needs your attention"
+
+Section renamed; previous anomaly set was incoherent for a 7:14 AM Sunday (garage open 22 min on a quiet morning, porch light still on after 13 hours, and a "mom's window via camera" item that read as creepy).
+
+**Beverly Hills items:**
+- **Doorbell · package delivered 6:32 AM** — action: "View clip" → dismisses on tap
+- **Briefing ready on Hub Max** — action: "Tap to start" → mutates Hub Max state to "Playing briefing", dismisses
+
+**Tahoe** keeps its existing two items (doorbell offline + lock battery) — coherent for vacation scenario, both *can't*-fix-remotely.
+
+### 8f. Quick Controls become functional
+
+- Tiles read live state from the device store
+- Tapping a tile opens the corresponding device detail view (same surface as from the Devices page)
+- Beverly Hills quick controls (4): thermostat, indoor cam, kitchen Hub Max, bedroom lights — most-recently-touched-by-AI
+
+### Defaults taken without explicit confirmation (correctable)
+
+- **Devices icon glyph:** `LayoutGrid` from lucide-react. Will swap to a custom SVG if it doesn't read as Google-Home enough.
+- **"Set as default" UX:** confirmation toast, no separate modal.
+- **Tab bar on Devices page:** stays visible, no tab marked active; back arrow returns to Home.
+- **Status bar time on Tahoe:** unchanged; vacation scene doesn't need a precise wake time.
+- **Quick-control selection rule:** most-recently-touched-by-AI (Q1c proposal `b`).
+
+---
+
 <!-- Add new amendments below -->
