@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# private to-do / planning notes (kept local, not for public repo)
+WIP.md
