@@ -4,35 +4,40 @@
 
 A functional mobile-first prototype for **Nest Presence AI**, a proposed Nest Aware Premium feature that fuses phone geofencing, on-device camera ML, Google Calendar, and learned time-of-day patterns into six home states — and runs your home automatically.
 
-Built for **UCLA MGMT 275 — Final Project (Prototype + PR-FAQs)**.
+Built for **UCLA MGMT 275 — Final Project (Prototype + PR-FAQs)**, due 2026-05-14.
+**Team:** Herui Song · Ethan Duffy.
 
 ## One-liner
 
-For Nest Aware subscribers with 3+ Nest devices who never set up Routines, Presence AI eliminates the Google Home app's complexity by inferring six home states (Everyone Home, Last Person Left, First Person Arriving, Guest Detected, Morning Wake, Night Wind-Down) and auto-executing the right device actions — with a "Did we get this right?" feedback loop that trains personalization.
+For Nest Aware subscribers with 3+ Nest devices who never set up Routines, **Presence AI infers six home states from existing Google signals and runs the right device actions automatically — no voice command, no manual routine setup.** A "Did we get this right?" feedback loop trains personalization without breaking trust.
 
 ## Live demo
 
-Deployed on Vercel. The walkthrough opens on **Morning Wake** — the visually-rich hero state — with Presence AI detecting motion at your typical wake time, calendar context, and household geofence presence, then auto-raising lights, pre-warming the thermostat, and starting a kitchen Hub briefing.
+→ **https://nest-presence-ai-app.vercel.app**
+
+The intro page on the desktop side has a **scenario picker** with two timepoints from the same household — drop the phone into either and watch the home adapt:
+
+- **Morning Wake** — Sunday 7:14 AM. Lights ramp, indoor cam goes private, the Hub briefing waits to be tapped.
+- **Last Person Left** — Sunday 11:45 AM. Both phones leave the geofence; the home auto-locks, eases the thermostat, and arms the indoor cam.
 
 ## What's testable in the prototype
 
-Tap the bottom tabs and the in-card actions to navigate.
-
-1. **Morning Wake hero on the Home tab** — Sunrise-tuned animation, the live state chip with confidence %, the auto-actioned card with rationale and three executed actions (plus one *held* below the security threshold), device tiles in light/dark "active" state.
-2. **Presence AI detail (Presence tab)** — All six states with confidence bars, signal-fusion visualization (geofence + camera + calendar + time), and trust-threshold copy (90% security, 75% comfort).
-3. **"Did we get this right?" feedback card** — Tap the white pill on the Home card. Pick *Got it right / Almost / Wrong call* → quick-suggestion chips → free-text note → live "What we'll learn" preview → submit → on-device confirmation animation.
-4. **Weekly Home Intelligence Report (Activity tab)** — Hero kWh-saved stat, daily auto-actions chart, five highlights including the correction the model already learned from.
-5. **Onboarding mode picker (Settings tab)** — Suggest vs Auto mode (the A/B from the eval doc), 48-hour learning-only toggle, local-only privacy mode, household readiness checklist.
+1. **Scenario picker (intro page).** Tap either of the two cards on the desktop side; the phone screen swaps gradient, greeting, and auto-actions for that scenario. Sells the core promise: *the home changes states automatically*.
+2. **Auto Mode hero card on Home tab.** Three executed auto-actions with rationale and per-row **Undo** — Undo collapses the row and reverts the device's state in real time (single source of truth).
+3. **Connected device truth.** Tap the **Devices** glyph (top-right of the Home greeting) or the "All N devices →" link to open a full-screen Devices page. Per-capability detail views (brightness slider, temperature slider, lock/cam/playing toggles) and a **"Set as default for [active state]"** CTA.
+4. **Suggest vs Auto modes (Settings tab).** The eval-doc's A/B made interactive — Suggest renders pending suggestion cards with **Confirm / Skip-with-reason**; Confirm slides into "Just done" with Undo. Activating the mode triggers a confirmation toast on the Home tab.
+5. **"Did we get this right?" feedback loop.** Tap the white pill on the Home hero card → pick *Got it right / Almost / Wrong call* → suggestion chips → free-text note → live "What we'll learn" preview → on-device confirmation animation. Free-text disables when **Local-only mode** (Settings) is on.
+6. **Multi-home + household profile.** Top-of-screen home switcher (Beverly Hills House ↔ Tahoe Cabin) — switching to Tahoe shows a "Last Person Left · 47 hr quiet" vacation scene with its own devices, Heads up, and weekly metrics. Profile sheet shows household members + a **Who knows what** privacy panel.
 
 ## Stack
 
-- Next.js 16 (App Router) + TypeScript
+- Next.js 16 (App Router, Turbopack) + TypeScript
 - Tailwind CSS v4
-- Framer Motion for screen transitions, the Morning Wake sunrise reveal, the action-stagger, and the feedback-loop micro-interactions
-- Lucide icons
+- Framer Motion — screen transitions, sunrise reveal, action-stagger, undo collapse
+- lucide-react icons
 - Deployed on Vercel
 
-This is a **functional, mock-data prototype** — no backend, no real device control, no cloud calls. All data lives in `lib/data.ts` and is meant to communicate the design intent.
+This is a **functional, mock-data prototype** — no backend, no real device control, no cloud calls. All scenario data lives in `lib/data.ts`. Device state is lifted to a single source of truth in `app/page.tsx` so AI auto-actions, manual mutations, and Undo all read/write the same store.
 
 ## Repository contents
 
@@ -40,33 +45,43 @@ This is a **functional, mock-data prototype** — no backend, no real device con
 app/
   layout.tsx, page.tsx, globals.css
 components/
-  iphone-frame.tsx       — iPhone 15 Pro bezel + Dynamic Island shell
-  status-bar.tsx         — Live time + status icons
-  tab-bar.tsx            — 4-tab nav (Home / Presence / Activity / Settings)
+  iphone-frame.tsx          — iPhone 15 Pro bezel + Dynamic Island shell
+  status-bar.tsx            — Status bar (lockable time per scenario)
+  tab-bar.tsx               — 4-tab nav (Home / Presence / Activity / Settings)
+  global-header.tsx         — Home switcher + profile circle
+  home-switcher-sheet.tsx   — BH ↔ Tahoe sheet
+  profile-sheet.tsx         — Household members + privacy
+  sheet.tsx                 — Reusable bottom sheet
   screens/
-    home.tsx             — Morning Wake hero (deep polish)
-    presence-ai.tsx      — 6-state detail with signal fusion
-    feedback.tsx         — "Did we get this right?" loop (deep polish)
-    report.tsx           — Weekly Home Intelligence Report
-    onboarding.tsx       — Mode picker + privacy controls
+    home.tsx                — Hero card, Heads up, Quick Controls, scene-aware bg
+    presence-ai.tsx         — 6-state detail with signal fusion
+    feedback.tsx            — "Did we get this right?" loop
+    report.tsx              — Weekly Home Intelligence Report
+    onboarding.tsx          — Mode picker + Local-only toggle + Who-knows-what
+    devices.tsx             — Full-screen Devices page + per-device detail
 lib/
-  data.ts                — All six home states, devices, weekly metrics
-  cn.ts                  — clsx wrapper
-PROMPT.md                — Source-of-truth product brief (the spec used to guide the AI build)
+  data.ts                   — Scenarios, devices, actions, headsUp, weekly metrics
+  cn.ts                     — clsx wrapper
 ```
 
-## Source of truth
+## Project documents
 
-The product brief that guided the design and copy is at [`PROMPT.md`](./PROMPT.md). It defines the user, the problem, the six home states, the trust thresholds, and what the feature explicitly does *not* do.
+| File | What it is |
+|---|---|
+| [`PROMPT.md`](./PROMPT.md) | **Source of truth.** The product brief that guided the build (rubric item #7). |
+| [`PR_FAQ.md`](./PR_FAQ.md) | Press release + External & Internal FAQs (rubric item #6). |
+| [`EVAL.md`](./EVAL.md) | Experimentation & eval set summary — A/B design, technical metrics, business KPI alignment (rubric item #8). |
+| [`APPENDIX.md`](./APPENDIX.md) | RICE problem prioritization, variance vs. earlier course artifacts, UX study (in progress). |
+| [`AMENDMENTS.md`](./AMENDMENTS.md) | Internal change log — every design decision since the original brief, numbered #1–#9. |
 
 ## Known limitations
 
-- **Mock data only.** No real device integration, no real Google account, no real geofence, no real camera ML.
-- **No persistence.** Feedback you give in the demo doesn't persist across reloads.
-- **iPhone-frame on desktop only.** The phone frame is a fixed 400×844 shell. On narrow viewports the layout reflows but the bezel does not shrink.
-- **V1.1 scope vs. submitted documents.** The prototype represents an evolved V1.1 vision that goes slightly beyond the originally-submitted strategy doc, product breakdown, and eval write-up. The two evolutions are: (1) the Home tab's "Needs your attention" anomaly surfacing, which is a new capability layered onto the original six-state model; and (2) the global home-switcher and household-member visibility, which weren't called out in the eval doc's experiment design. The full delta is logged in [`AMENDMENTS.md`](./AMENDMENTS.md). Earlier-assignment documents were not retroactively updated.
-- **Second home is cosmetic.** The home switcher exposes two homes ("Beverly Hills House" and "Tahoe Cabin"); switching to Tahoe re-renders the UI but the underlying mock data is not differentiated per home.
-- **Internal model judgment hidden.** Per a design call, model confidence (the `% confident` numbers from the eval doc) is treated as internal plumbing and is never surfaced to the user — only "X of Y signals agree" appears in-product.
+- **Mock data only.** No real device integration, no real Google account, no real geofence, no real camera ML. Scenario state and device state live in memory.
+- **No persistence.** Feedback you give in the demo doesn't survive a reload. Scenario switches reset BH device state to that scenario's "after" picture.
+- **iPhone-frame on desktop only.** The phone frame is a fixed 400×844 shell; on narrow viewports the layout reflows but the bezel does not shrink.
+- **UX study pending.** The 8–12 interviews required by the assignment are scheduled for the week of 2026-05-12; placeholder section in [`APPENDIX.md`](./APPENDIX.md). All design judgments to date are PM-led, not user-validated.
+- **Internal model judgment hidden by design.** Per AMENDMENTS #1, model confidence (the 92%/94% numbers from the eval write-up) is treated as internal plumbing and never surfaced to the user — only "X of Y signals agree" appears in-product.
+- **V1.1 scope vs. earlier course artifacts.** The prototype represents an evolved V1.1 vision that goes beyond the originally-submitted strategy doc, product breakdown, and eval write-up — chiefly the connected-device-truth pass (full Devices page, single-source state, Set-as-default), the Heads up surface, and the multi-home framing. Variance is logged in [`AMENDMENTS.md`](./AMENDMENTS.md) and explained in [`APPENDIX.md`](./APPENDIX.md). Earlier-assignment documents were not retroactively updated.
 
 ## Run locally
 
@@ -78,4 +93,4 @@ npm run dev
 
 ---
 
-UCLA MGMT 275 · Final Project · Herui Song · May 2026
+UCLA MGMT 275 · Final Project · Herui Song & Ethan Duffy · May 2026

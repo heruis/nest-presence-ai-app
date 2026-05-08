@@ -306,4 +306,39 @@ Until now the prototype shipped one BH scenario (Sunday 7:14 AM Morning Wake). T
 - **Scenario picker placement:** below feature chips, above link buttons, within the existing left-column max-w-sm rail. Two-up grid on `sm:` and above, single column on narrow.
 - **Tahoe + scenario interaction:** clicking a scenario card from the Tahoe view auto-switches `activeHomeId` back to BH. Scenarios are BH-only.
 
+---
+
+## #10 — Repo aligned with Final Project rubric
+
+**Decision (2026-05-07):** Bring the repo into 1:1 alignment with the Final Project (Prototype + PR-FAQs) submission requirements. The prototype was strong; the supporting documentation was either stale (README) or missing (PR-FAQ, eval summary, appendix). This pass closes those gaps so a grader landing on the GitHub repo finds every rubric item from the assignment in one place.
+
+### 10a. README rewrite
+
+Stripped references to features that were removed across #1–#9 (confidence percentages, the 90%/75% trust thresholds, the 48-hour learning toggle, "Hub briefing started" as Morning Wake's third action). Replaced the 5-bullet "What's testable" with the post-#9 surfaces: scenario picker, connected device truth, Suggest vs Auto, "Did we get this right?" loop, multi-home + privacy. Updated the repository tree, added a documents map, and rewrote Known Limitations to reflect current state (the "second home is cosmetic" line is no longer accurate after #7d). Added team-of-two byline (Herui Song + Ethan Duffy).
+
+### 10b. New `EVAL.md` — rubric item #8
+
+Distilled `Experimentation_Eval_Exercise_GoogleNest_v2.docx` into a repo-readable summary that explicitly cross-walks each eval-design choice to its prototype implementation. The doc is structured to mirror the original (Part I A/B experiment + Part II LLM eval) so a grader holding the source PDF can locate every section. Added a final table that calls out which eval concepts the prototype exercises vs. which remain on paper (eval set, Agent-as-a-Judge, weekly drift regression).
+
+### 10c. New `PR_FAQ.md` — rubric item #6
+
+Working-backwards launch document. **Press release** ≤1.5pp with two embedded customer/exec quotes per the assignment template. **8 External FAQs** scoped to what a real Nest customer would push back on (devices required, mistakes, privacy, iPhone, vs Routines, pricing). **14 Internal FAQs** carrying the heavy PM lift: RICE table, North Star Metric, full SMART criteria with launch + guardrail bars, growth lever, monetization defense, eng feasibility, three-layer privacy/consent model, Trust & Safety controls, iPhone strategy, Matter scope, cannibalization analysis, org dependencies, kill criteria.
+
+### 10d. New `APPENDIX.md` — rubric "appendix 4–10pp"
+
+Five sections:
+1. **RICE prioritization** — three problem candidates (Presence AI, Matter reliability, Doorbell summarizer) with full math and "why each loses."
+2. **UX Study Plan** — 10-interview recruiting target, full 30-min script, hypothesized findings → V1 changes table, validation thresholds. Marked **in progress** with a 2026-05-12 conduct date.
+3. **Variance log** — 9-row table catalogging exactly where the prototype diverged from the strategy/breakdown/eval artifacts, with the AMENDMENTS pointer for each.
+4. **Annotated screenshot reference** — 5-scene 2-minute Loom walkthrough script.
+5. **Source materials & references** — paths to all earlier course artifacts and the external citations re-stated.
+
+### Defaults taken without explicit confirmation (correctable)
+
+- **Team byline:** Herui Song + Ethan Duffy, derived from the Strategy Case Exercise co-authorship. If the team for the Final Project is different, the bylines on README, PR_FAQ, APPENDIX need to be updated in three places.
+- **UX study status as a TODO:** appendix lists the study as scheduled-not-conducted with a 2026-05-12 conduct date. If interviews aren't completed in time for the 2026-05-14 submission, the README's Known Limitations line will need to be promoted from "study pending" to "study not conducted; prototype is PM-led."
+- **PR-FAQ pricing pin:** $15/mo Premium tier with $8/mo Basic, per the strategy doc citation. Will need a fact-check before submission since pricing is the kind of number a grader can verify.
+- **External-FAQ count:** 8 (within the assignment's 7–10 range, picked the lower-middle to keep tightness).
+- **Internal-FAQ count:** 14 (within the 10–20 range, biased high — RICE / SMART / kill criteria each earn their own slot rather than being smushed together).
+
 
