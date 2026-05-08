@@ -72,7 +72,8 @@ lib/
 | [`PR_FAQ.md`](./PR_FAQ.md) | Press release + External & Internal FAQs (rubric item #6). |
 | [`EVAL.md`](./EVAL.md) | Experimentation & eval set summary — A/B design, technical metrics, business KPI alignment (rubric item #8). |
 | [`APPENDIX.md`](./APPENDIX.md) | RICE problem prioritization, variance vs. earlier course artifacts, UX study (in progress). |
-| [`AMENDMENTS.md`](./AMENDMENTS.md) | Internal change log — every design decision since the original brief, numbered #1–#9. |
+| [`AMENDMENTS.md`](./AMENDMENTS.md) | Internal change log — every design decision since the original brief, numbered #1–#10. |
+| [`WIP.md`](./WIP.md) | **Pre-submission to-do list.** Open items for 2026-05-14 — start here on the next session. |
 
 ## Known limitations
 
