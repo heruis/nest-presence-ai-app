@@ -414,15 +414,17 @@ function ToggleControl({
       </div>
       <button
         onClick={() => onChange(!on)}
+        role="switch"
+        aria-checked={on}
         className={cn(
-          "relative h-8 w-14 shrink-0 rounded-full transition",
-          on ? "bg-emerald-500" : "bg-white/12"
+          "relative inline-flex h-[32px] w-[56px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200",
+          on ? "bg-emerald-500" : "bg-white/15"
         )}
       >
         <motion.span
-          animate={{ x: on ? 27 : 3 }}
-          transition={{ type: "spring", stiffness: 420, damping: 30 }}
-          className="absolute top-[3px] h-[26px] w-[26px] rounded-full bg-white shadow"
+          animate={{ x: on ? 24 : 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 32 }}
+          className="block h-[26px] w-[26px] rounded-full bg-white shadow-md"
         />
       </button>
     </div>
