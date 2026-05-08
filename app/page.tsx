@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, ExternalLink, Code, Check } from "lucide-react";
+import { Sparkles, ExternalLink, Code, Check, Sunrise, DoorOpen } from "lucide-react";
 import { IPhoneFrame } from "@/components/iphone-frame";
 import { TabBar, type TabId } from "@/components/tab-bar";
 import { HomeScreen } from "@/components/screens/home";
@@ -19,6 +19,7 @@ import {
   dataForHome,
   type DeviceAction,
   type DeviceState,
+  type ScenarioId,
 } from "@/lib/data";
 
 type ScreenId = TabId | "feedback" | "devices";
@@ -36,9 +37,9 @@ export default function Page() {
   const [screen, setScreen] = useState<ScreenId>("home");
   const [mode, setMode] = useState<Mode>("auto");
   const [activeHomeId, setActiveHomeId] = useState(homes[0].id);
+  const [scenario, setScenarioState] = useState<ScenarioId>("morning-wake");
   const [homeSwitcherOpen, setHomeSwitcherOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [learning, setLearning] = useState(true);
   const [localOnly, setLocalOnly] = useState(false);
   const [activatedToast, setActivatedToast] = useState<string | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
@@ -48,15 +49,28 @@ export default function Page() {
     Record<string, Record<string, DeviceState>>
   >(() =>
     homes.reduce<Record<string, Record<string, DeviceState>>>((acc, h) => {
-      acc[h.id] = dataForHome(h.id).initialDeviceState;
+      acc[h.id] = dataForHome(h.id, "morning-wake").initialDeviceState;
       return acc;
     }, {})
   );
 
+  // When the BH scenario changes, reset BH's device state to that scenario's
+  // initial picture so the hero card's "after" matches what the AI just did.
+  // Tahoe is single-scenario and untouched.
+  const prevScenarioRef = useRef(scenario);
+  useEffect(() => {
+    if (prevScenarioRef.current === scenario) return;
+    prevScenarioRef.current = scenario;
+    setDeviceStateByHome((prev) => ({
+      ...prev,
+      "bh-house": dataForHome("bh-house", scenario).initialDeviceState,
+    }));
+  }, [scenario]);
+
   const activeTab = tabFor[screen];
   const home = homes.find((h) => h.id === activeHomeId) ?? homes[0];
   const me = householdMembers[0];
-  const homeData = dataForHome(activeHomeId);
+  const homeData = dataForHome(activeHomeId, scenario);
   const deviceState = deviceStateByHome[activeHomeId];
 
   const headerProps = {
@@ -102,6 +116,17 @@ export default function Page() {
     // Intentionally a no-op on lib/data.ts — the toast inside DevicesScreen carries the affordance.
   };
 
+  // Scenario picker on the intro side — clicking always pivots the phone to BH
+  // with that scenario, since scenarios are BH-only for the prototype.
+  const pickScenario = (s: ScenarioId) => {
+    if (activeHomeId !== "bh-house") setActiveHomeId("bh-house");
+    if (screen !== "home") setScreen("home");
+    setSelectedDeviceId(null);
+    setScenarioState(s);
+  };
+  const isScenarioActive = (s: ScenarioId) =>
+    activeHomeId === "bh-house" && scenario === s;
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#050608]">
       {/* ambient backdrop */}
@@ -142,6 +167,36 @@ export default function Page() {
             <FeatureChip label='"Did we get this right?"' />
             <FeatureChip label="Multi-home + profile" />
             <FeatureChip label="Weekly Intelligence Report" />
+          </div>
+
+          {/* Scenario picker — drives the phone to a specific BH state (per AMENDMENTS #9c) */}
+          <div className="mt-7 max-w-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
+              Try a scenario
+            </p>
+            <p className="mt-1 text-[12px] leading-snug text-white/45">
+              Tap to drop the phone into a different moment in your home.
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <ScenarioCard
+                active={isScenarioActive("morning-wake")}
+                onClick={() => pickScenario("morning-wake")}
+                icon={<Sunrise size={15} strokeWidth={2.2} />}
+                accent="amber"
+                time="7:14 AM · Sunday"
+                title="Morning Wake"
+                blurb="Lights ramp, briefing waits on the Hub, indoor cam goes private."
+              />
+              <ScenarioCard
+                active={isScenarioActive("last-person-left")}
+                onClick={() => pickScenario("last-person-left")}
+                icon={<DoorOpen size={15} strokeWidth={2.2} />}
+                accent="blue"
+                time="11:45 AM · Sunday"
+                title="Last Person Left"
+                blurb="You and Yuna left for breakfast. House goes to Away on its own."
+              />
+            </div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
@@ -187,7 +242,7 @@ export default function Page() {
             <div className="relative h-full w-full">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={screen + activeHomeId + mode + (learning ? "L" : "") + (localOnly ? "P" : "")}
+                  key={screen + activeHomeId + mode + scenario}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
@@ -197,7 +252,6 @@ export default function Page() {
                   {screen === "home" && (
                     <HomeScreen
                       mode={mode}
-                      learning={learning}
                       homeData={homeData}
                       deviceState={deviceState}
                       onOpenPresence={() => setScreen("presence")}
@@ -218,8 +272,6 @@ export default function Page() {
                     <OnboardingScreen
                       mode={mode}
                       setMode={setMode}
-                      learning={learning}
-                      setLearning={setLearning}
                       localOnly={localOnly}
                       setLocalOnly={setLocalOnly}
                       onActivate={triggerActivatedToast}
@@ -296,5 +348,61 @@ function FeatureChip({ label, hot = false }: { label: string; hot?: boolean }) {
     >
       {label}
     </span>
+  );
+}
+
+function ScenarioCard({
+  active,
+  onClick,
+  icon,
+  accent,
+  time,
+  title,
+  blurb,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  accent: "amber" | "blue";
+  time: string;
+  title: string;
+  blurb: string;
+}) {
+  const accentRing =
+    accent === "amber"
+      ? "ring-amber-400/40 from-amber-400/15 to-amber-400/0"
+      : "ring-[#8ab4f8]/40 from-[#8ab4f8]/15 to-[#8ab4f8]/0";
+  const iconBg =
+    accent === "amber"
+      ? "bg-amber-400/20 text-amber-200"
+      : "bg-[#8ab4f8]/20 text-[#a8c7fa]";
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      className={`group relative overflow-hidden rounded-2xl p-3 text-left ring-1 transition ${
+        active
+          ? `bg-gradient-to-br ${accentRing} text-white`
+          : "bg-white/[0.03] ring-white/10 text-white/80 hover:bg-white/[0.06]"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className={`flex h-7 w-7 items-center justify-center rounded-lg ${iconBg}`}
+        >
+          {icon}
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/55">
+          {time}
+        </span>
+        {active && (
+          <span className="ml-auto rounded-full bg-white/85 px-1.5 py-[2px] text-[9px] font-semibold uppercase tracking-wider text-black">
+            Viewing
+          </span>
+        )}
+      </div>
+      <p className="mt-2 text-[14px] font-semibold tracking-tight">{title}</p>
+      <p className="mt-1 text-[11px] leading-snug text-white/55">{blurb}</p>
+    </button>
   );
 }

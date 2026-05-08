@@ -7,12 +7,12 @@ import {
   HandHelping,
   Wand,
   Lock,
-  Cpu,
   CircleCheck,
   ChevronRight,
   Smartphone,
   Camera,
   Calendar as CalIcon,
+  Cpu,
   Check,
   Shield,
   MapPin,
@@ -43,8 +43,6 @@ const signalIcons: Record<PrivacySignal, typeof MapPin> = {
 export function OnboardingScreen({
   mode,
   setMode,
-  learning,
-  setLearning,
   localOnly,
   setLocalOnly,
   onActivate,
@@ -55,8 +53,6 @@ export function OnboardingScreen({
 }: {
   mode: Mode;
   setMode: (m: Mode) => void;
-  learning: boolean;
-  setLearning: (v: boolean) => void;
   localOnly: boolean;
   setLocalOnly: (v: boolean) => void;
   onActivate: (m: Mode) => void;
@@ -116,17 +112,8 @@ export function OnboardingScreen({
         />
       </div>
 
-      {/* learning toggle */}
+      {/* privacy toggle */}
       <div className="mx-4 mt-4 rounded-3xl bg-[#16191c] ring-1 ring-white/5">
-        <ToggleRow
-          icon={<Cpu size={16} strokeWidth={2.2} />}
-          tint="amber"
-          title="48-hour learning-only window"
-          body="Watch and learn before any action fires. Recommended for new homes."
-          on={learning}
-          onChange={setLearning}
-        />
-        <div className="mx-4 h-px bg-white/6" />
         <ToggleRow
           icon={<Lock size={16} strokeWidth={2.2} />}
           tint="emerald"
@@ -367,15 +354,18 @@ function ToggleRow({
       </div>
       <button
         onClick={() => onChange(!on)}
+        role="switch"
+        aria-checked={on}
+        aria-label={title}
         className={cn(
-          "relative h-7 w-12 shrink-0 rounded-full transition",
-          on ? "bg-emerald-500" : "bg-white/10"
+          "relative inline-flex h-[28px] w-[48px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200",
+          on ? "bg-emerald-500" : "bg-white/15"
         )}
       >
         <motion.span
-          animate={{ x: on ? 23 : 3 }}
-          transition={{ type: "spring", stiffness: 420, damping: 30 }}
-          className="absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white shadow"
+          animate={{ x: on ? 20 : 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 32 }}
+          className="block h-[22px] w-[22px] rounded-full bg-white shadow-md"
         />
       </button>
     </div>

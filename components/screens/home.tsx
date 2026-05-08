@@ -8,7 +8,6 @@ import {
   RotateCcw,
   Check,
   X as XIcon,
-  Cpu,
   LayoutGrid,
 } from "lucide-react";
 import { StatusBar } from "@/components/status-bar";
@@ -29,7 +28,6 @@ const skipReasons = ["Wrong time", "Wrong action", "Just not now"];
 
 export function HomeScreen({
   mode,
-  learning,
   homeData,
   deviceState,
   home,
@@ -44,7 +42,6 @@ export function HomeScreen({
   onOpenProfile,
 }: {
   mode: Mode;
-  learning: boolean;
   homeData: HomeDataSet;
   deviceState: Record<string, DeviceState>;
   home: HomeLocation;
@@ -60,6 +57,7 @@ export function HomeScreen({
 }) {
   const state = homeData.activeState;
   const statusBarTime = homeData.activeStateTime.split(" ")[0];
+  const isAway = homeData.scene === "away";
 
   // Suggest-mode pending vs confirmed
   const [pending, setPending] = useState<PendingSuggestion[]>(homeData.pendingSuggestions);
@@ -119,21 +117,44 @@ export function HomeScreen({
 
   return (
     <div className="relative h-full w-full">
-      {/* sunrise gradient top half */}
-      <div className="sunrise absolute inset-x-0 top-0 h-[420px]" />
+      {/* scene gradient — morning sunrise vs away cool blue */}
+      {isAway ? (
+        <div
+          className="absolute inset-x-0 top-0 h-[420px]"
+          style={{
+            background:
+              "radial-gradient(120% 80% at 50% 0%, #5b8fd9 0%, #2a4a85 28%, #14223f 60%, #0a0c0e 100%)",
+          }}
+        />
+      ) : (
+        <div className="sunrise absolute inset-x-0 top-0 h-[420px]" />
+      )}
       <div className="absolute inset-x-0 top-[260px] h-[200px] bg-gradient-to-b from-transparent to-[#0a0c0e]" />
 
-      {/* sun */}
-      <motion.div
-        initial={{ y: 80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
-        className="absolute left-1/2 top-[120px] h-[180px] w-[180px] -translate-x-1/2 rounded-full pulse-soft"
-        style={{
-          background:
-            "radial-gradient(circle at 50% 50%, rgba(255,236,179,0.95) 0%, rgba(255,179,77,0.55) 35%, rgba(240,98,146,0) 75%)",
-        }}
-      />
+      {/* center orb — morning sun vs cool away glow */}
+      {isAway ? (
+        <motion.div
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute left-1/2 top-[120px] h-[180px] w-[180px] -translate-x-1/2 rounded-full pulse-soft"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 50%, rgba(173,206,255,0.85) 0%, rgba(95,143,217,0.45) 35%, rgba(20,34,63,0) 75%)",
+          }}
+        />
+      ) : (
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute left-1/2 top-[120px] h-[180px] w-[180px] -translate-x-1/2 rounded-full pulse-soft"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 50%, rgba(255,236,179,0.95) 0%, rgba(255,179,77,0.55) 35%, rgba(240,98,146,0) 75%)",
+          }}
+        />
+      )}
 
       <div className="relative z-10 h-full w-full overflow-y-auto no-scrollbar pb-32">
         <StatusBar tone="light" time={statusBarTime} />
@@ -157,7 +178,7 @@ export function HomeScreen({
               Sunday · May 5
             </p>
             <h1 className="mt-1 text-[34px] font-semibold leading-tight tracking-tight">
-              Good morning,
+              {homeData.greeting},
               <br />
               {me.name}
             </h1>
@@ -188,8 +209,8 @@ export function HomeScreen({
           </span>
         </motion.button>
 
-        {/* mode indicator (Suggest only, hidden when learning) */}
-        {mode === "suggest" && !learning && (
+        {/* mode indicator (Suggest only) */}
+        {mode === "suggest" && (
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -202,61 +223,13 @@ export function HomeScreen({
           </motion.div>
         )}
 
-        {/* LEARNING BANNER — replaces hero when 48-hour learning is on */}
-        {learning ? (
-          <motion.div
-            initial={{ y: 16, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-4 mt-6 overflow-hidden rounded-[28px] bg-[#16191c]/85 ring-1 ring-amber-400/25 backdrop-blur-xl"
-          >
-            <div className="px-5 pt-5 pb-3">
-              <div className="flex items-center gap-2 text-amber-300">
-                <Cpu size={14} strokeWidth={2.5} />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
-                  Learning your home · Hour 12 of 48
-                </span>
-              </div>
-              <p className="mt-2 text-[15px] leading-snug text-white/85">
-                Watching, not acting yet. Here's what we'd have done.
-              </p>
-            </div>
-            <div className="mx-5 h-px bg-white/8" />
-            <ul className="px-2 py-2">
-              {homeData.actions.map((action, i) => {
-                const device = homeData.devices.find((d) => d.id === action.deviceId);
-                if (!device) return null;
-                const Icon = device.icon;
-                return (
-                  <motion.li
-                    key={action.id}
-                    initial={{ x: -10, opacity: 0 }}
-                    animate={{ x: 0, opacity: 0.55 }}
-                    transition={{ delay: 0.9 + i * 0.12, duration: 0.5 }}
-                    className="flex items-start gap-3 rounded-2xl px-3 py-2.5"
-                  >
-                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/8 text-white/50">
-                      <Icon size={15} strokeWidth={2.2} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14px] font-medium text-white/65 line-through decoration-white/20">
-                        {action.description}
-                      </p>
-                      <p className="text-[12px] text-white/40">{device.product}</p>
-                    </div>
-                  </motion.li>
-                );
-              })}
-            </ul>
-          </motion.div>
-        ) : (
-          /* hero card */
-          <motion.div
-            initial={{ y: 16, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-4 mt-6 overflow-hidden rounded-[28px] bg-[#16191c]/85 ring-1 ring-white/8 backdrop-blur-xl"
-          >
+        {/* hero card */}
+        <motion.div
+          initial={{ y: 16, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.7, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="mx-4 mt-6 overflow-hidden rounded-[28px] bg-[#16191c]/85 ring-1 ring-white/8 backdrop-blur-xl"
+        >
             <div className="px-5 pt-5 pb-4">
               <div className="flex items-center gap-2 text-[#fbbf24]">
                 <Sparkles size={14} strokeWidth={2.5} />
@@ -330,7 +303,6 @@ export function HomeScreen({
               </button>
             </div>
           </motion.div>
-        )}
 
         {/* Undone pill */}
         <AnimatePresence>
@@ -347,8 +319,8 @@ export function HomeScreen({
           )}
         </AnimatePresence>
 
-        {/* PENDING SUGGESTIONS — Suggest Mode only, not while learning */}
-        {mode === "suggest" && !learning && pending.length > 0 && (
+        {/* PENDING SUGGESTIONS — Suggest Mode only */}
+        {mode === "suggest" && pending.length > 0 && (
           <Section
             title="Pending suggestions"
             count={pending.length}
@@ -434,7 +406,7 @@ export function HomeScreen({
         )}
 
         {/* JUST DONE — Suggest Mode only */}
-        {mode === "suggest" && !learning && confirmed.length > 0 && (
+        {mode === "suggest" && confirmed.length > 0 && (
           <Section title="Just done" count={confirmed.length} delay={1.1}>
             <ul className="space-y-1.5 px-4">
               <AnimatePresence initial={false}>

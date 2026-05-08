@@ -249,4 +249,61 @@ Section renamed; previous anomaly set was incoherent for a 7:14 AM Sunday (garag
 
 ---
 
-<!-- Add new amendments below -->
+## #9 — Scenario simulator + onboarding cleanup
+
+**Decision (2026-05-07):** Three changes in one pass — drop a half-built feature (the 48-hour learning window), fix two latent bugs in the Local-only toggle, and add a state simulator on the desktop intro side so a viewer can drive the phone into a second scenario without clicking around inside the mobile mock. The simulator is the headline change; the other two are cleanup blocking it.
+
+### 9a. Strip the 48-hour learning window
+
+The "Learning your home · Hour 12 of 48" banner replaced the hero card when the toggle was on, but it told the user nothing the rest of the app didn't already tell them — and the toggle was the wrong handle on the underlying idea (Suggest Mode already covers "watch and propose, don't act"). Removed:
+
+- `learning` / `setLearning` state in `app/page.tsx`
+- `learning` props through `HomeScreen` and `OnboardingScreen`
+- The Learning banner block in `home.tsx` (was conditional on `learning`)
+- The "48-hour learning-only window" `ToggleRow` in `onboarding.tsx`
+- `learning` segment of the `AnimatePresence` key
+
+### 9b. Local-only toggle fixes
+
+Two bugs, one root cause and one geometry:
+
+- **Phone-screen flash on toggle.** The `<motion.div>` wrapping the screen in `app/page.tsx` keyed on `screen + activeHomeId + mode + (learning ? "L" : "") + (localOnly ? "P" : "")`. Toggling `localOnly` changed the key, AnimatePresence treated it as a new screen, and the entire phone faded out and back in for what should have been an inline state change. Key now reads `screen + activeHomeId + mode + scenario` — `localOnly` is gone, scene-changing scenario is in.
+- **White dot escaping the track.** The old `ToggleRow` used absolute positioning (`top-[3px]`, `x: 23 / 3`) which was geometrically borderline and could render the knob outside the track depending on box-sizing. Rebuilt as an `inline-flex` track with `p-[3px]` padding; the knob is `block h-[22px] w-[22px]` and travels `x: 0 → 20`, all inside the padded inner area. The padding bounds the knob on every side; it cannot escape.
+
+### 9c. Scenario simulator on the intro page
+
+Until now the prototype shipped one BH scenario (Sunday 7:14 AM Morning Wake). The phone home-switcher could swap to Tahoe, but a viewer couldn't see two BH states side-by-side — the most-impressive thing about Presence AI (it changes states automatically as the day evolves) was the thing the prototype demonstrated worst.
+
+**Mechanic:** Two scenario cards in a "Try a scenario" cluster on the desktop left column, below the feature chips. Tapping a card pivots the phone to BH at that scenario. Cards show time + state name + one-liner blurb; the active card is highlighted with a "Viewing" badge.
+
+**Phone-side changes per scenario:**
+
+| | Morning Wake (default) | Last Person Left (new) |
+|---|---|---|
+| Time | 7:14 AM Sunday | 11:45 AM Sunday |
+| Greeting | "Good morning, Herui" | "Have a good one, Herui" |
+| Scene | Sunrise gradient + warm orb | Cool blue gradient + soft glow orb |
+| Hero rationale | Motion + 9 AM standup + commute | Both phones left geofence within 2 min |
+| Auto-actions | Lights → 35%, thermo → 71°F, indoor cam → privacy | Front door locked, thermo → 78°F eco, indoor cam armed |
+| Heads up | Package delivered + briefing ready | Package arriving 12:30 PM (info) |
+| Initial device state | Reflects Morning Wake "after" | Reflects Last Person Left "after" |
+
+**Implementation:**
+
+- `ScenarioId` union (`"morning-wake" | "last-person-left"`) added to `lib/data.ts`
+- `dataForHome(homeId, scenarioId?)` extended; Tahoe ignores `scenarioId`
+- New `beverlyHillsAwayState`, `beverlyHillsAwayInitialState`, `beverlyHillsAwayActions`, `beverlyHillsAwayHeadsUp`, `beverlyHillsAwayQuickControlIds`, `beverlyHillsAwayData`
+- `HomeDataSet` gains `greeting: string` + `scene: "morning" | "away"` so the home screen reads its own visual treatment from data
+- On scenario change, BH device state resets to that scenario's `initialDeviceState` (so Undo and Quick Controls are coherent with the visible "after" picture); Tahoe state never resets
+- Scenario also feeds the AnimatePresence key, so a switch animates the phone screen in/out (sells the demo)
+
+### Defaults taken without explicit confirmation (correctable)
+
+- **Away greeting copy:** "Have a good one, Herui." Tested against "House is all set," "All locked up," "Take care" — picked the warmest, most consumer-Google.
+- **Away scene visual:** cool blue radial gradient with a soft glow orb (no icon) instead of the morning sun. Reads as "secured / on autopilot." (User pulled the ShieldCheck badge mid-review — too literal; the gradient alone carries the mood.)
+- **Heads up for Away:** single info-tone "Package arriving 12:30 PM" item. Two would have over-loaded the screen given the scenario is supposed to feel *settled*, not noisy.
+- **Quick controls for Away:** thermostat, front lock, indoor cam, bedroom lights — same most-recently-touched-by-AI rule from #8f.
+- **Scenario picker placement:** below feature chips, above link buttons, within the existing left-column max-w-sm rail. Two-up grid on `sm:` and above, single column on narrow.
+- **Tahoe + scenario interaction:** clicking a scenario card from the Tahoe view auto-switches `activeHomeId` back to BH. Scenarios are BH-only.
+
+

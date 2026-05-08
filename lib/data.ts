@@ -531,6 +531,10 @@ export type HomeDataSet = {
   activeState: HomeState;
   /** Phone status-bar time when this home is active (per AMENDMENTS #8d). */
   activeStateTime: string;
+  /** Greeting prefix on the Home tab — name is appended on a second line. */
+  greeting: string;
+  /** Visual scene for Home-tab background (per AMENDMENTS #9c). */
+  scene: "morning" | "away";
   devices: Device[];
   initialDeviceState: Record<string, DeviceState>;
   /** AI auto-actions with before/after so Undo can revert exactly. */
@@ -542,6 +546,9 @@ export type HomeDataSet = {
   pendingSuggestions: PendingSuggestion[];
   weeklyHeadline: { count: number; subtitle: string };
 };
+
+/** Scenarios available for the Beverly Hills home (per AMENDMENTS #9c). */
+export type ScenarioId = "morning-wake" | "last-person-left";
 
 // -----------------------------------------------------------------------------
 // Beverly Hills — Sunday May 5, 7:14 AM, Morning Wake
@@ -713,11 +720,154 @@ export const beverlyHillsQuickControlIds = [
 export const beverlyHillsData: HomeDataSet = {
   activeState: morningWake,
   activeStateTime: "7:14 AM",
+  greeting: "Good morning",
+  scene: "morning",
   devices: beverlyHillsDevices,
   initialDeviceState: beverlyHillsInitialState,
   actions: beverlyHillsActions,
   headsUp: beverlyHillsHeadsUp,
   quickControlIds: beverlyHillsQuickControlIds,
+  weeklyMetrics,
+  timeline: beverlyHillsTimeline,
+  pendingSuggestions,
+  weeklyHeadline: {
+    count: 84,
+    subtitle: "Apr 28 – May 5 · No voice commands. No manual routines.",
+  },
+};
+
+// -----------------------------------------------------------------------------
+// Beverly Hills — Sunday May 5, 11:45 AM, Last Person Left
+// (per AMENDMENTS #9c — same home, same devices, different scenario)
+// -----------------------------------------------------------------------------
+
+export const beverlyHillsAwayState: HomeState = {
+  id: "last-person-left",
+  name: "Last Person Left",
+  icon: DoorOpen,
+  accent: "blue",
+  confidence: 96,
+  inferredAt: "11:45 AM",
+  signals: [
+    {
+      id: "geofence",
+      label: "Both phones left geofence",
+      detail: "Herui 11:43 · Yuna 11:44",
+      icon: MapPin,
+    },
+    {
+      id: "camera",
+      label: "No motion 2 min",
+      detail: "Indoor cam confirms empty",
+      icon: Camera,
+    },
+    {
+      id: "calendar",
+      label: "No home events until 7 PM",
+      detail: "Calendar clear",
+      icon: Calendar,
+    },
+    {
+      id: "time",
+      label: "Within Sunday brunch window",
+      detail: "Learned pattern · 11–1 PM",
+      icon: Clock,
+    },
+  ],
+  rationale:
+    "Both phones left within 2 minutes. Switching to Away — locking up, easing the thermostat, arming cameras.",
+  actions: [],
+};
+
+export const beverlyHillsAwayInitialState: Record<string, DeviceState> = {
+  "bh-bedroom-lights": { on: false, value: 0, label: "Off" },
+  "bh-kitchen-lights": { on: false, value: 0, label: "Off" },
+  "bh-thermostat": {
+    on: true,
+    value: 78,
+    label: "Eco · 78°F",
+    detail: "Auto-set by Last Person Left",
+  },
+  "bh-front-lock": {
+    on: true,
+    label: "Locked · auto",
+    detail: "Auto-set by Last Person Left",
+  },
+  "bh-indoor-cam": {
+    on: true,
+    label: "Armed · Away",
+    detail: "Auto-set by Last Person Left",
+  },
+  "bh-doorbell": { on: true, label: "Watching", detail: "Pkg expected 12:30 PM" },
+  "bh-hub-max": { on: false, label: "Idle" },
+};
+
+export const beverlyHillsAwayActions: DeviceAction[] = [
+  {
+    id: "bh-lpl-lock",
+    deviceId: "bh-front-lock",
+    description: "Front door locked",
+    before: { on: false, label: "Unlocked · 11:43 AM" },
+    after: {
+      on: true,
+      label: "Locked · auto",
+      detail: "Auto-set by Last Person Left",
+    },
+  },
+  {
+    id: "bh-lpl-thermo",
+    deviceId: "bh-thermostat",
+    description: "Thermostat → 78°F eco",
+    before: { on: true, value: 71, label: "71°F comfort" },
+    after: {
+      on: true,
+      value: 78,
+      label: "Eco · 78°F",
+      detail: "Auto-set by Last Person Left",
+    },
+  },
+  {
+    id: "bh-lpl-cam",
+    deviceId: "bh-indoor-cam",
+    description: "Indoor cam armed · Away",
+    before: { on: false, label: "Off · privacy mode" },
+    after: {
+      on: true,
+      label: "Armed · Away",
+      detail: "Auto-set by Last Person Left",
+    },
+  },
+];
+
+export const beverlyHillsAwayHeadsUp: HeadsUpItem[] = [
+  {
+    id: "bh-lpl-package",
+    title: "Package arriving 12:30 PM",
+    detail: "Amazon · we'll capture the drop-off",
+    icon: Package,
+    actionLabel: "Got it",
+    actionPastTense: "Confirmed",
+    tone: "info",
+  },
+];
+
+export const beverlyHillsAwayQuickControlIds = [
+  "bh-thermostat",
+  "bh-front-lock",
+  "bh-indoor-cam",
+  "bh-bedroom-lights",
+];
+
+export const beverlyHillsAwayData: HomeDataSet = {
+  activeState: beverlyHillsAwayState,
+  activeStateTime: "11:45 AM",
+  greeting: "Have a good one",
+  scene: "away",
+  devices: beverlyHillsDevices,
+  initialDeviceState: beverlyHillsAwayInitialState,
+  actions: beverlyHillsAwayActions,
+  headsUp: beverlyHillsAwayHeadsUp,
+  quickControlIds: beverlyHillsAwayQuickControlIds,
   weeklyMetrics,
   timeline: beverlyHillsTimeline,
   pendingSuggestions,
@@ -900,6 +1050,8 @@ const tahoePendingSuggestions: PendingSuggestion[] = [
 export const tahoeData: HomeDataSet = {
   activeState: tahoeQuietState,
   activeStateTime: "7:14 AM",
+  greeting: "Good morning",
+  scene: "away",
   devices: tahoeDevices,
   initialDeviceState: tahoeInitialState,
   actions: tahoeActions,
@@ -911,9 +1063,14 @@ export const tahoeData: HomeDataSet = {
   weeklyHeadline: { count: 12, subtitle: "Apr 28 – May 5 · House has been empty all week." },
 };
 
-export function dataForHome(homeId: string): HomeDataSet {
+export function dataForHome(
+  homeId: string,
+  scenarioId: ScenarioId = "morning-wake"
+): HomeDataSet {
   if (homeId === "tahoe-cabin") return tahoeData;
-  return beverlyHillsData;
+  return scenarioId === "last-person-left"
+    ? beverlyHillsAwayData
+    : beverlyHillsData;
 }
 
 // =============================================================================
