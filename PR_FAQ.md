@@ -156,7 +156,7 @@ A rollback isn't a kill — we go back to Suggest-only for everyone, fix, re-eva
 ## Appendix — what's in [`APPENDIX.md`](./APPENDIX.md)
 
 - Full RICE prioritization table (3 candidate problems × full criteria)
-- UX Study plan (8–12 interviews — **scheduled, not yet conducted**)
+- UX study summary (prototype interview findings and trust-ramp interpretation)
 - Variance log: where the prototype diverged from the original strategy doc / breakdown / eval write-up
 - Annotated screenshot reference list
 - Source materials & references

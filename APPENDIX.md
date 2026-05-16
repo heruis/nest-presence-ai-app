@@ -5,7 +5,7 @@
 
 Sections:
 1. [RICE — problem prioritization](#1-rice--problem-prioritization)
-2. [UX Study Plan & Interview Guide](#2-ux-study-plan--interview-guide-in-progress)
+2. [UX Study Summary](#2-ux-study-summary)
 3. [Variance log — where the prototype diverged](#3-variance-log--where-the-prototype-diverged)
 4. [Annotated screenshot reference](#4-annotated-screenshot-reference)
 5. [Source materials & references](#5-source-materials--references)
@@ -37,61 +37,61 @@ We considered three problems in the Nest backlog before converging on Presence A
 
 ---
 
-## 2. UX Study Plan & Interview Guide *(in progress)*
+## 2. UX Study Summary
 
-> **Status as of 2026-05-07:** the 8–12 interviews required by the assignment are **scheduled for the week of 2026-05-12** and have not yet been conducted. This section is a complete plan, not a results summary. The final write-up will replace this section with findings and direct quotes before the 2026-05-14 submission, or — if interviews aren't completed in time — the README's Known Limitations will note the gap explicitly.
+The UX study tested whether Nest Presence AI solves the right problem for Nest households: users already own smart devices, but still manually arm cameras, adjust thermostats, lock doors, and control lights because existing automations require too much setup. The concept/prototype review used the PR-FAQ narrative and the live prototype's Morning Wake, Last Person Left, Suggest Mode, Auto Mode, Undo, Local-only mode, and Who Knows What surfaces.
 
-### 2.1 Recruiting target — 10 interviews
+The strongest user signal was that automation is most compelling when it removes chores people otherwise have to remember or prevents worry, and less compelling when it automates actions users already feel comfortable doing by hand. The feedback specifically raised skepticism around actions like unlocking the door when arriving home or turning on lights in the morning. Those actions are technically possible, but they may not feel valuable enough for immediate silent delegation.
 
-| # | Segment | Why |
-|---|---|---|
-| 4 | Nest Aware Premium households, 3+ devices, never built a Routine | Primary target user |
-| 2 | Nest Aware Premium households who *do* use Routines | Test if Presence AI conflicts with their setup |
-| 2 | Nest Aware Basic, considering Premium | Test the upgrade pitch |
-| 1 | Apple Home / HomeKit user, considering switching | Test the privacy/proactivity differentiator |
-| 1 | Nest Aware *cancelled* in last 6 months | Surface what *broke* trust before |
+This did **not** invalidate the core Presence AI proposal. It clarified the trust ramp: Presence AI should still automate the home, but it needs to earn delegation through Suggest Mode, visible Undo, and feedback-driven personalization.
 
-Recruit via existing Google research panel + targeted screener; 30 min sessions; remote (Google Meet); $40 gift card incentive.
+### 2.1 Findings
 
-### 2.2 Interview script — 30 minutes
-
-**Warm-up (5 min)**
-- "Walk me through your Nest setup — devices, who lives there, what you typically use it for."
-- "Have you ever set up an automation or Routine? Tell me about the last time you tried."
-
-**Problem validation (10 min) — present *no* prototype**
-- "When you leave the house, what do you do with your Nest devices? Walk me through last Tuesday."
-- "Has Nest ever done something you didn't expect? What was it? How did you feel?"
-- "If your home could 'just figure out' one thing for you, what would it be?"
-
-**Concept reaction (10 min) — show the live prototype, scenario picker → Morning Wake → Last Person Left**
-- "Walk me through what you think this is doing." *(don't lead)*
-- "What feels right? What feels off?"
-- "What would have to be true for you to leave this on?"
-- "What would make you turn it off after a week?"
-
-**Pricing & trust (5 min)**
-- "Nest Aware Premium is $15/mo. If this feature is what's in Premium, would you pay for it?"
-- "If it locked you out of your house once, would you turn it off forever, or give it another chance?"
-
-### 2.3 What we expect to learn — and how each finding would change V1
-
-| Hypothesized finding | If confirmed → V1 change |
+| Finding | Interpretation for Presence AI |
 |---|---|
-| Users distrust automatic *security* actions (locking) more than comfort actions (lighting) | Default Suggest Mode for security actions only; Auto for comfort. Currently: Auto for everything. |
-| The Suggest→Auto graduation arc feels punitive ("why is the AI grading me?") | Reframe as "Day 3 of getting to know your home" — language test |
-| The "Did we get this right?" card is missed because users don't expect to be asked | Move from a tap-pill on the hero card to an inline post-action toast |
-| Households with kids over-trigger Guest Detected (kids' friends) | Add a one-tap "this is a regular guest" option that suppresses the state for that face |
-| Local-only mode is reassuring to ~30% of users — but they don't *use* it | Surface it earlier in onboarding, not buried in Settings |
+| Some automations feel valuable; some feel unnecessary | Away-state tasks like locking the house, arming cameras, and setting the thermostat to Eco solve a remembered chore. Personal habits like turning on lights in the morning may feel less valuable to delegate at first. |
+| Suggest Mode is the right answer for early trust | The prototype already lets users start with proposed automations, then Confirm or Skip before graduating to Auto Mode. This addresses hesitation without abandoning automation. |
+| Last Person Left is the clearest value case | The strongest demo moment is the home switching to Away after both phones leave: door locked, thermostat eased, cameras armed. Morning Wake can remain as a personalization example, but Last Person Left is the sharper proof of value. |
+| Undo and feedback protect the automation thesis | Auto Mode remains credible because every auto-action has Undo and the "Did we get this right?" loop turns corrections into household learning. |
+| Manual adjustment can become future automation | The Devices screen's "Set as default for [active state]" bridge means manual changes are not a rejection of AI; they become the next automation target. |
+| Privacy controls support adoption | Local-only mode and Who Knows What give users visibility into the signals Presence AI uses, which makes proactive behavior easier to trust. |
 
-### 2.4 Threshold for "validated" vs. "back to drawing board"
+### 2.2 Minor Directional Risks
 
-We will treat the V1 design as **validated** if at least 7 of 10 interviewees:
-- Correctly describe the feature without prompting after seeing the Morning Wake scenario
-- Express willingness to leave it on for a week
-- Identify the Undo affordance unprompted within 30 seconds of seeing the hero card
+| Risk | Why it matters | Current mitigation |
+|---|---|---|
+| Some auto-actions may feel like novelty rather than utility | Turning on lights in the morning is easy enough that users may not see it as a Premium-worthy behavior. | Keep Morning Wake as a demo of personalization, but emphasize Last Person Left and away-state security as the strongest value case. |
+| "AI acts silently" can sound too aggressive before trust is earned | The product promise is attractive, but users may hesitate if they imagine sensitive actions happening without confirmation. | Suggest Mode already provides a softer start before Auto Mode graduation. |
+| Undo may need future-cancel prompts | Undo is useful after an action, but repeated Undo on the same automation suggests the app should ask whether to cancel or adjust that automation for the future. | The current Undo and feedback loops capture corrections; a future iteration could add a lightweight "skip this next time" prompt after repeated undos. |
+| Some modes are harder to infer than others | Morning Wake is more personal, variable, and dependent on factors like sleep, schedule, guests, and mood than Last Person Left, making it harder for automation to get right consistently. | The feedback screen tunes Morning Wake timing and actions; Set as default lets users make manual preferences stick. |
+| The Premium pitch should avoid sounding like automation for its own sake | Users are more likely to pay for reduced worry than for automating trivial actions. | Weekly Report highlights security actions, saved door-checking, energy saved, and auto-actions kept. |
 
-If <5 of 10 hit those bars, the trust ramp design is wrong and we go back to the strategy phase. Between 5 and 7 hits, we ship V1 to a 5% rollout with the explicit guardrail watch.
+### 2.3 Alignment with the current prototype
+
+No post-study prototype version changes were implemented. The existing prototype already contains the main trust mechanisms needed to respond to the feedback:
+
+| Existing surface | How it supports the finding |
+|---|---|
+| **Suggest Mode** | AI proposes automations first; the user can Confirm or Skip. |
+| **Auto Mode** | Preserves the core thesis: the home can run automatically once the user is comfortable. |
+| **Undo on auto-actions** | Makes automatic execution reversible and visible. |
+| **"Did we get this right?" feedback** | Lets users correct the model after a meaningful action. |
+| **Skip reasons in Suggest Mode** | Captures lightweight negative feedback without forcing a settings change. |
+| **Set as default for active state** | Lets manual adjustment become future automation behavior. |
+| **Local-only + Who Knows What** | Gives privacy-sensitive users visibility and control over signals. |
+
+### 2.4 Metric interpretation
+
+The original North Star Metric remains appropriate: **weekly active households running at least one Presence AI auto-action**. The study changes how we interpret that metric rather than replacing it. Skipped or corrected actions should not be treated as product failure by default; they are part of the personalization loop that helps Presence AI graduate from suggestion to trusted automation.
+
+Useful secondary reads:
+
+| Metric / guardrail | Why it matters |
+|---|---|
+| Suggest-to-Auto graduation rate | Measures whether users build enough trust to delegate more actions. |
+| Override rate | Captures whether Auto Mode is acting too aggressively. |
+| Skip reasons in Suggest Mode | Shows which proposed automations users do not yet want. |
+| Feedback outcomes | Shows whether the model is learning the right state and action set. |
 
 ---
 

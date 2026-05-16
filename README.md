@@ -71,7 +71,7 @@ lib/
 | [`PROMPT.md`](./PROMPT.md) | **Source of truth.** The product brief that guided the build (rubric item #7). |
 | [`PR_FAQ.md`](./PR_FAQ.md) | Press release + External & Internal FAQs (rubric item #6). |
 | [`EVAL.md`](./EVAL.md) | Experimentation & eval set summary — A/B design, technical metrics, business KPI alignment (rubric item #8). |
-| [`APPENDIX.md`](./APPENDIX.md) | RICE problem prioritization, variance vs. earlier course artifacts, UX study (in progress). |
+| [`APPENDIX.md`](./APPENDIX.md) | RICE problem prioritization, UX study summary, variance vs. earlier course artifacts. |
 | [`AMENDMENTS.md`](./AMENDMENTS.md) | Internal change log — every design decision since the original brief, numbered #1–#10. |
 
 ## Known limitations
@@ -79,7 +79,7 @@ lib/
 - **Mock data only.** No real device integration, no real Google account, no real geofence, no real camera ML. Scenario state and device state live in memory.
 - **No persistence.** Feedback you give in the demo doesn't survive a reload. Scenario switches reset BH device state to that scenario's "after" picture.
 - **iPhone-frame on desktop only.** The phone frame is a fixed 400×844 shell; on narrow viewports the layout reflows but the bezel does not shrink.
-- **UX study pending.** The 8–12 interviews required by the assignment are scheduled for the week of 2026-05-12; placeholder section in [`APPENDIX.md`](./APPENDIX.md). All design judgments to date are PM-led, not user-validated.
+- **UX study scope.** The appendix now includes a concept/prototype interview summary. The study sharpened the trust ramp around Suggest Mode, Undo, feedback learning, and Last Person Left as the clearest value case; no post-study prototype changes were implemented.
 - **Internal model judgment hidden by design.** Per AMENDMENTS #1, model confidence (the 92%/94% numbers from the eval write-up) is treated as internal plumbing and never surfaced to the user — only "X of Y signals agree" appears in-product.
 - **V1.1 scope vs. earlier course artifacts.** The prototype represents an evolved V1.1 vision that goes beyond the originally-submitted strategy doc, product breakdown, and eval write-up — chiefly the connected-device-truth pass (full Devices page, single-source state, Set-as-default), the Heads up surface, and the multi-home framing. Variance is logged in [`AMENDMENTS.md`](./AMENDMENTS.md) and explained in [`APPENDIX.md`](./APPENDIX.md). Earlier-assignment documents were not retroactively updated.
 
