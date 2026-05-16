@@ -14,11 +14,13 @@
 
 *A new Nest Aware Premium feature infers six household states from existing Google signals and runs the home automatically — no voice commands, no manual routines.*
 
-**Mountain View, CA — May 14, 2026** — Google Nest today announced **Nest Presence AI**, a proactive home intelligence layer that automatically detects what's happening at home and runs the right device actions on its own. Available as part of **Nest Aware Premium** at $15/month, Presence AI fuses four signals customers already share with Google — phone geofencing, on-device camera ML, Google Calendar, and learned time-of-day patterns — to infer one of six household states (Morning Wake, Last Person Left, First Person Arriving, Everyone Home, Guest Detected, Night Wind-Down) and execute the right actions across lights, locks, cameras, the thermostat, and Hub displays.
+**Mountain View, CA — May 14, 2026** — Google Nest today announced **Nest Presence AI**, a proactive home intelligence layer that automatically detects what's happening at home and runs the right device actions on its own. Available as part of **Nest Aware Premium** at $20/month, Presence AI fuses four signals customers already share with Google — phone geofencing, on-device camera ML, Google Calendar, and learned time-of-day patterns — to infer one of six household states (Morning Wake, Last Person Left, First Person Arriving, Everyone Home, Guest Detected, Night Wind-Down) and execute the right actions across lights, locks, cameras, the thermostat, and Hub displays.
 
 The problem Presence AI solves is one Nest customers have lived with for a decade: the Google Home app's automation surface — Routines — is powerful, but most households never set them up. The "intelligent home" was always one configuration screen away. Presence AI removes that screen entirely. The home runs itself; the user only intervenes when something feels wrong, and a built-in **"Did we get this right?"** card turns every correction into a personalization signal.
 
-> "I've owned Nest cameras and a thermostat for three years and never built a single Routine. With Presence AI on, the lights came up at 7:14 the way I'd have set them — except I didn't set anything. The doors locked when we left for breakfast. I'm not sure when it learned us, but it did." — *Sarah K., Nest Aware Premium beta participant, Beverly Hills, CA*
+> "I've owned Nest cameras and a thermostat for three years and never built a single Routine. With Presence AI on, the lights came up at 7:14 the way I'd have set them — except I didn't set anything. The doors locked when we left for breakfast. I'm not sure when it learned us, but it did." — *Sarah K., Nest Aware Premium beta participant, Beverly Hills, CA*[^1]
+
+[^1]: Composite quote drawn from the project's concept-review interviews; the final press release would carry a verified beta participant.
 
 > "Ambient computing was always the destination. Presence AI is the first time the home moves before you do." — *Rishi Chandra, VP & GM, Google Nest*
 
@@ -26,7 +28,7 @@ The problem Presence AI solves is one Nest customers have lived with for a decad
 
 **Privacy is the contract.** All presence inference runs on-device, accelerated by Google's Tensor chip. No raw video or audio leaves the home. A **Local-only mode** disables every cloud call, including the Weekly Home Intelligence Report, for households that want zero off-device processing. A **Who Knows What** panel in Settings shows exactly which signals each household member contributes — and lets each member revoke any of them.
 
-**Availability.** Nest Presence AI rolls out to Nest Aware Premium subscribers on Android, beginning May 14, 2026. iPhone users with at least three Nest devices receive the feature with degraded geofencing reliability, and a one-time onboarding screen explains the gap. Households with fewer than three Nest devices receive a tailored upgrade guide rather than an active feature flag. Pricing: **$15/month**, replacing the current $12/month Premium tier as the Premium offer.
+**Availability.** Nest Presence AI rolls out to Nest Aware Premium subscribers on Android, beginning May 14, 2026. iPhone users with at least three Nest devices receive the feature with degraded geofencing reliability, and a one-time onboarding screen explains the gap. Households with fewer than three Nest devices receive a tailored upgrade guide rather than an active feature flag. Pricing: **$20/month** — no change from the existing Premium tier.
 
 **Learn more:** g.co/nest/presence-ai
 
@@ -66,7 +68,7 @@ Routines (and Alexa Routines) are reactive: they wait for you to either say some
 
 ### 8. How much does it cost? Is it included with Nest Aware?
 
-Presence AI is part of **Nest Aware Premium at $15/month**. If you're on Nest Aware Basic ($8/month), upgrading gets you Presence AI plus everything Premium already includes (60-day video event history, unlimited cameras). There's no separate purchase, no add-on cart, and no per-device pricing.
+Presence AI is part of **Nest Aware Premium at $20/month**. If you're on Nest Aware Basic ($10/month), upgrading gets you Presence AI plus everything Premium already includes (60-day video event history, unlimited cameras). There's no separate purchase, no add-on cart, and no per-device pricing.
 
 ---
 
@@ -86,7 +88,7 @@ Two reasons. First, **RICE math**: the addressable population (Nest Aware househ
 
 - **Specific:** ≥40% of Nest Aware households with 3+ devices have run ≥1 Presence AI auto-action in the past 7 days.
 - **Measurable:** Telemetry from the existing Nest Aware backend; daily dashboard.
-- **Achievable:** Baseline activation for manual Routines is ~8%. The eval-design expected lift is +20pp (Suggest) to +25pp (Auto), arriving at the 40% bar within 60 days post-launch.
+- **Achievable:** Baseline activation for manual Routines is ~8%. The eval-design expected lift is +20pp (Suggest) to +25pp (Auto), putting Day-7 activation at ~33%. The Day-60 step from 33 → 40% comes from the trust ramp itself — Suggest-to-Auto graduation and the household-network flywheel — which the eval's 28-day window can't capture but the strategy-doc target accounts for.
 - **Relevant:** Direct upstream of the Premium upgrade and churn KPIs.
 - **Time-bound:** 60 days post-GA (so by **2026-07-14**, given a 2026-05-14 launch).
 
@@ -108,9 +110,9 @@ Presence AI wins on reach (every Nest Aware household with 3+ devices), impact (
 
 The **Suggest → Auto graduation arc**. Households who graduate from Suggest to Auto have an order-of-magnitude higher 30-day active usage rate than households who never leave Suggest. The lever isn't acquiring more households into the feature; it's accelerating the trust ramp inside the household. Two follow-ons gated by the V1 launch numbers: (a) per-action graduation (let users move single auto-actions to Auto without graduating the whole feature), (b) "We were having a party" night-mode opt-out, surfaced contextually rather than buried in settings.
 
-### 6. Why $15/month, and why isn't this in Basic?
+### 6. Why $20/month, and why isn't this in Basic?
 
-Basic is positioned as **video event history**; Premium is positioned as **the home that acts on its own**. Pricing the proactive layer into Basic dilutes both tiers. The $15 price point is the existing Premium tier — we're not raising it; we're giving subscribers a dramatically better reason to be on it. Modeled break-even at ~12 months on incremental Basic→Premium upgrades alone, before any reduction in churn.
+Basic is positioned as **video event history**; Premium is positioned as **the home that acts on its own**. Pricing the proactive layer into Basic dilutes both tiers. The $20 price point is the existing Premium tier — we're not raising it; we're giving subscribers a dramatically better reason to be on it. Modeled break-even at ~12 months on incremental Basic→Premium upgrades alone, before any reduction in churn.
 
 ### 7. Is the 6–12 month engineering timeline real?
 

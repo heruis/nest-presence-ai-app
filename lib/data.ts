@@ -109,11 +109,11 @@ export const morningWake: HomeState = {
       status: "executed",
     },
     {
-      id: "hub-briefing",
-      label: "Hub briefing started",
-      device: "Nest Hub Max — Kitchen",
-      icon: Volume2,
-      detail: "Weather, calendar, commute",
+      id: "indoor-cam-off",
+      label: "Indoor cam off · privacy mode",
+      device: "Nest Cam — Indoor",
+      icon: Camera,
+      detail: "Cameras only run when you're away",
       status: "executed",
     },
   ],
@@ -335,12 +335,12 @@ export const pendingSuggestions: PendingSuggestion[] = [
     signalCount: "4 of 4 sources agree",
   },
   {
-    id: "ps-hub",
-    label: "Start morning briefing on Hub",
-    device: "Nest Hub Max · Kitchen",
-    icon: Volume2,
-    rationale: "Weather, calendar, and commute ready when you reach the kitchen",
-    signalCount: "3 of 4 sources agree",
+    id: "ps-cam",
+    label: "Turn indoor cam off · privacy mode",
+    device: "Nest Cam · Indoor",
+    icon: Camera,
+    rationale: "You're up — cameras only need to watch when you're away",
+    signalCount: "4 of 4 sources agree",
   },
 ];
 
@@ -1049,8 +1049,8 @@ const tahoePendingSuggestions: PendingSuggestion[] = [
 
 export const tahoeData: HomeDataSet = {
   activeState: tahoeQuietState,
-  activeStateTime: "7:14 AM",
-  greeting: "Good morning",
+  activeStateTime: "9:32 AM",
+  greeting: "Tahoe is quiet",
   scene: "away",
   devices: tahoeDevices,
   initialDeviceState: tahoeInitialState,

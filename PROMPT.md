@@ -1,7 +1,7 @@
 # Product Brief: Google Nest — Nest Presence AI
 
 > This document serves as the high-level product vision for the **Nest Presence AI** feature,
-> distilled from the MGMT 276 Assignment #2 strategy analysis. It is written for an agent partner
+> distilled from the MGMT 275 Assignment #2 strategy analysis. It is written for an agent partner
 > who needs to understand the *why* before building.
 
 ---
@@ -89,7 +89,7 @@ Google's context stack is **structurally un-copyable** in the short term. This i
 
 ## Monetization
 
-- **Nest Aware Premium tier** at $15/month (vs. current $12/month Basic)
+- **Nest Aware Premium tier** at $20/month (vs. $10/month Basic)
 - Nest Presence AI is the anchor feature that justifies the upgrade
 - Target: 25% Basic → Premium upgrade rate within Q1 post-launch
 

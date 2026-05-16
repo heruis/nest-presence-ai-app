@@ -253,7 +253,7 @@ export function OnboardingScreen({
       </motion.button>
 
       <p className="mx-6 mt-3 text-center text-[11px] leading-snug text-white/45">
-        Included with Nest Aware Premium ($15/mo). All presence inference runs on-device. No raw video or audio
+        Included with Nest Aware Premium ($20/mo). All presence inference runs on-device. No raw video or audio
         leaves your home.
       </p>
     </div>

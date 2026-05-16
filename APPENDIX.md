@@ -39,6 +39,8 @@ We considered three problems in the Nest backlog before converging on Presence A
 
 ## 2. UX Study Summary
 
+**Method.** **N = 10 interviews**, conducted by phone, ~10 minutes each, week of 2026-05-12. Nine of ten interviewees were friends and family with little or no current smart-home device ownership; they reasoned hypothetically about the household scenarios narrated on the prototype. The tenth interviewee owns ~3 smart-home devices and provided lived-experience contrast against the hypothetical reads. Each session walked the participant through the PR-FAQ one-liner, the Morning Wake and Last Person Left scenarios on the live prototype, and the Suggest vs. Auto distinction; the participant reacted aloud and answered targeted prompts. **Honest limitation:** because most interviewees were reasoning hypothetically, the study captures *reaction to the idea* better than *behavior in use*. A pre-launch beta is the appropriate next instrument — see §2.4 for how this affects metric interpretation.
+
 The UX study tested whether Nest Presence AI solves the right problem for Nest households: users already own smart devices, but still manually arm cameras, adjust thermostats, lock doors, and control lights because existing automations require too much setup. The concept/prototype review used the PR-FAQ narrative and the live prototype's Morning Wake, Last Person Left, Suggest Mode, Auto Mode, Undo, Local-only mode, and Who Knows What surfaces.
 
 The strongest user signal was that automation is most compelling when it removes chores people otherwise have to remember or prevents worry, and less compelling when it automates actions users already feel comfortable doing by hand. The feedback specifically raised skepticism around actions like unlocking the door when arriving home or turning on lights in the morning. Those actions are technically possible, but they may not feel valuable enough for immediate silent delegation.
@@ -156,5 +158,5 @@ Static export: not provided (live URL is the canonical artifact, per the assignm
 [2] Amazon Developer Blog, 2023. Alexa skill count >130,000 in U.S. by 2023.
 [3] Grand View Research / MarketsandMarkets / Statista. "Smart Home Market Size," 2024. ~$170B 2025 mid-range estimate; ~20% CAGR.
 [4] Loup Ventures. "Voice Assistant IQ Test," 2022–2023. Google Assistant first on open-ended factual queries.
-[5] Google Store, Q1 2026. Nest Aware Basic $8/mo, Premium $15/mo.
+[5] Google Store, May 2026. Nest Aware Basic $10/mo, Premium $20/mo. (Real-world product is now branded *Google Home Premium · Standard / Advanced*; we keep legacy naming for course-document continuity.)
 [6] Patel, Nilay. "Why Voice Assistants Have Failed Us." *The Verge*, 2023; Thompson, Ben. "AI Assistants and the Problem of Reactivity." *Stratechery*, 2023.

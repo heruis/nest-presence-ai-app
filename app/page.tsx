@@ -230,7 +230,7 @@ export default function Page() {
           </div>
 
           <p className="mt-6 text-[11px] leading-relaxed text-white/35 max-w-sm">
-            UCLA MGMT 275 · Final Project · Herui Song. Mock data only — no live
+            UCLA MGMT 275 · Final Project · Herui Song & Ethan Duffy. Mock data only — no live
             account integration. Tip: try Settings → Suggest Mode to see the
             confirmation flow.
           </p>
